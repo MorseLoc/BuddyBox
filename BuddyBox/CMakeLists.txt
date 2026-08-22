@@ -3,7 +3,15 @@
 #
 
 # Add source to this project's executable.
-add_executable (BuddyBox "BuddyBox.cpp" "BuddyBox.h")
+
+find_package(glfw3 CONFIG REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(glad CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+
+add_executable(BuddyBox "BuddyBox.cpp" "BuddyBox.h")
+
+target_link_libraries(BuddyBox PRIVATE glfw glad::glad glm::glm OpenGL::GL)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET BuddyBox PROPERTY CXX_STANDARD 20)
