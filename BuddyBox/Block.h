@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 
+#include <string>
+
 // Lists all types of blocks that can exist in the game.
 //
 // For now, Grass is the only block type.
@@ -25,6 +27,10 @@ struct Block
 	// Whether this block has solid collision.
 	bool solid;
 
+	// File path for this block's texture.
+	std::string texturePath;
+
 	// Creates a block of the given type.
 	Block(BlockType type);
+
 };

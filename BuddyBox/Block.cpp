@@ -20,5 +20,8 @@ Block::Block(BlockType blockType)
 
 		// The player cannot walk through grass blocks.
 		solid = true;
+
+		// Grass uses the grass texture.
+		texturePath = "textures/grass.png";
 	}
 }
