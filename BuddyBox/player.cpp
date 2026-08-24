@@ -33,6 +33,13 @@ Player::Player()
 	// Walking speed.
 	// 3 world units per second.
 	speed = 3.0f;
+
+	// The player starts with no vertical movement.
+	verticalVelocity = 0.0f;
+
+	// We will let collision determine whether
+	// the player is actually standing on something.
+	grounded = false;
 }
 
 // Checks whether the player's hitbox would overlap
@@ -169,5 +176,40 @@ void Player::move(
 	if (!collidesWithWorld(testPosition, world))
 	{
 		position.z = testPosition.z;
+	}
+
+	// GRAVITY
+	//
+	// Gravity constantly pulls the player's
+	// vertical velocity downward.
+	const float gravity = -20.0f;
+
+	verticalVelocity += gravity * deltaTime;
+
+
+	// Calculate where gravity wants to move the player.
+	glm::vec3 verticalTestPosition = position;
+
+	verticalTestPosition.y += verticalVelocity * deltaTime;
+
+
+	// Check whether that vertical movement would
+	// collide with a solid block.
+	if (!collidesWithWorld(verticalTestPosition, world))
+	{
+		// Nothing is blocking us.
+		// Allow the vertical movement.
+		position.y = verticalTestPosition.y;
+
+		grounded = false;
+	}
+	else
+	{
+		// Something stopped our vertical movement.
+		verticalVelocity = 0.0f;
+
+		// For now, assume a downward collision
+		// means we landed on the ground.
+		grounded = true;
 	}
 }

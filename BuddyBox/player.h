@@ -34,6 +34,18 @@ struct Player
 	// Measured in world units per second.
 	float speed;
 
+	// The player's current movement speed on the Y axis.
+	//
+	// Negative = falling
+	// Positive = moving upward
+	// Zero = not moving vertically
+	float verticalVelocity;
+
+
+	// Whether the player is currently standing
+	// on something solid.
+	bool grounded;
+
 
 	// Constructor.
 	// Gives a new player its starting values.
