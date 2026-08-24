@@ -105,6 +105,18 @@ bool World::loadFromFile(const std::string& filename)
 				block
 			);
 		}
+
+		else if (blockTypeName == "Spawner")
+		{
+			Block block(BlockType::Spawner);
+
+			placeBlock(
+				x,
+				y,
+				z,
+				block
+			);
+		}
 	}
 
 	return true;

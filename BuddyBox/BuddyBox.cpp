@@ -92,23 +92,26 @@ int main()
 
 	// 1.5.2
 	// Load the grass texture image from disk.
-	int textureWidth;
-	int textureHeight;
-	int textureChannels;
+	int grassTextureWidth;
+	int grassTextureHeight;
+	int grassTextureChannels;
 
 	// Stores the OpenGL ID for the grass texture.
 	unsigned int grassTexture = 0;
 
-	unsigned char* textureData = stbi_load(
+	// Stores the OpenGL ID for the spawner texture.
+	unsigned int spawnerTexture = 0;
+
+	unsigned char* grassTextureData = stbi_load(
 		"textures/grass.png",
-		&textureWidth,
-		&textureHeight,
-		&textureChannels,
+		&grassTextureWidth,
+		&grassTextureHeight,
+		&grassTextureChannels,
 		STBI_rgb_alpha
 	);
 
 	// Check whether the image loaded successfully.
-	if (textureData == nullptr)
+	if (grassTextureData == nullptr)
 	{
 		std::cout << "Failed to load grass texture.\n";
 	}
@@ -119,9 +122,9 @@ int main()
 		// Print the texture's width and height to the console.
 		std::cout
 			<< "Texture size: "
-			<< textureWidth
+			<< grassTextureWidth
 			<< " x "
-			<< textureHeight
+			<< grassTextureHeight
 			<< "\n";
 
 		// 1.5.2.1 
@@ -163,19 +166,96 @@ int main()
 			GL_TEXTURE_2D,
 			0,
 			GL_RGBA,
-			textureWidth,
-			textureHeight,
+			grassTextureWidth,
+			grassTextureHeight,
 			0,
 			GL_RGBA,
 			GL_UNSIGNED_BYTE,
-			textureData
+			grassTextureData
 		);
 
 		// Build smaller versions of the texture for distance rendering.
 		glGenerateMipmap(GL_TEXTURE_2D);
 
 		// We no longer need the original image data in normal memory.
-		stbi_image_free(textureData);
+		stbi_image_free(grassTextureData);
+	}
+
+	// 1.5.3
+	// Load the Spawner texture image from disk.
+	int spawnerTextureWidth;
+	int spawnerTextureHeight;
+	int spawnerTextureChannels;
+
+	unsigned char* spawnerTextureData = stbi_load(
+		"textures/spawner.png",
+		&spawnerTextureWidth,
+		&spawnerTextureHeight,
+		&spawnerTextureChannels,
+		STBI_rgb_alpha
+	);
+
+	// Check whether the Spawner image loaded successfully.
+	if (spawnerTextureData == nullptr)
+	{
+		std::cout << "Failed to load Spawner texture.\n";
+	}
+	else
+	{
+		std::cout << "Spawner texture loaded successfully.\n";
+
+		// Create the OpenGL texture.
+		glGenTextures(1, &spawnerTexture);
+
+		// Work with the Spawner texture.
+		glBindTexture(
+			GL_TEXTURE_2D,
+			spawnerTexture
+		);
+
+		// Keep pixel art crisp.
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_MIN_FILTER,
+			GL_NEAREST
+		);
+
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_MAG_FILTER,
+			GL_NEAREST
+		);
+
+		// Allow the texture to repeat.
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_WRAP_S,
+			GL_REPEAT
+		);
+
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_WRAP_T,
+			GL_REPEAT
+		);
+
+		// Upload the Spawner PNG to the GPU.
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA,
+			spawnerTextureWidth,
+			spawnerTextureHeight,
+			0,
+			GL_RGBA,
+			GL_UNSIGNED_BYTE,
+			spawnerTextureData
+		);
+
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		// Free the original image from normal memory.
+		stbi_image_free(spawnerTextureData);
 	}
 
 		// 1.6
@@ -499,6 +579,13 @@ int main()
 			deltaTime = currentFrame - lastFrame;
 
 			lastFrame = currentFrame;
+			
+			// Prevent huge movement jumps if the game
+			// temporarily pauses, such as while moving the window.
+			if (deltaTime > 0.05f)
+			{
+				deltaTime = 0.05f;
+			}
 
 			//@change SECTION 1.13.2 MOVED TO PLAYER.CPP
 
@@ -519,8 +606,12 @@ int main()
 			);
 
 			// 1.13.2.1
-			// Keep the camera attached to the player's position.
-			cameraPosition = player.position;
+			// Keep the camera attached to the player's position. UPDATED TO BE SLIGHTLY ABOVE THE PLAYER'S POSITION (0.7f) SO THE CAMERA IS NOT AT GROUND LEVEL.
+			cameraPosition = player.position + glm::vec3(
+				0.0f,
+				0.7f,
+				0.0f
+			);
 
 			// 1.13.2.2
 			// Get the mouse's current position.
@@ -692,6 +783,26 @@ int main()
 			// Draw every block stored in the world.
 			for (const auto& entry : world.blocks)
 			{
+
+				// Get the actual block stored at this grid position.
+				const Block& block = entry.second;
+
+
+				// Choose the correct texture for this block type.
+				if (block.type == BlockType::Grass)
+				{
+					glBindTexture(
+						GL_TEXTURE_2D,
+						grassTexture
+					);
+				}
+				else if (block.type == BlockType::Spawner)
+				{
+					glBindTexture(
+						GL_TEXTURE_2D,
+						spawnerTexture
+					);
+				}
 				// Get the grid coordinate.
 				int x = std::get<0>(entry.first);
 				int y = std::get<1>(entry.first);

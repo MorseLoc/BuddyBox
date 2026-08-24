@@ -9,7 +9,8 @@
 // For now, Grass is the only block type.
 enum class BlockType
 {
-	Grass
+	Grass,
+	Spawner
 };
 
 
@@ -26,6 +27,9 @@ struct Block
 
 	// Whether this block has solid collision.
 	bool solid;
+
+	// Whether this block is able to create Jebubs.
+	bool spawnsJebub;
 
 	// File path for this block's texture.
 	std::string texturePath;
