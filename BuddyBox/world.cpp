@@ -1,0 +1,111 @@
+#include "World.h"
+
+#include <fstream>
+#include <string>
+
+// Checks whether the world already contains a block
+// at the given X, Y, Z grid position.
+bool World::hasBlock(
+	int x,
+	int y,
+	int z
+) const
+{
+	// Create one grid coordinate from X, Y, and Z.
+	auto position = std::make_tuple(
+		x,
+		y,
+		z
+	);
+
+	// Search the block map for that position.
+	return blocks.find(position) != blocks.end();
+}
+
+// Checks whether a solid block exists
+// at the given X, Y, Z grid position.
+bool World::isSolidAt(
+	int x,
+	int y,
+	int z
+) const
+{
+	// Create the grid coordinate we want to check.
+	auto position = std::make_tuple(
+		x,
+		y,
+		z
+	);
+
+	// Try to find a block at this position.
+	auto block = blocks.find(position);
+
+	// If no block exists here, the space is not solid.
+	if (block == blocks.end())
+	{
+		return false;
+	}
+
+	// If a block does exist, return its solid property.
+	return block->second.solid;
+}
+
+// Places a block at the given grid position.
+void World::placeBlock(
+	int x,
+	int y,
+	int z,
+	const Block& block
+)
+{
+	// Create one grid coordinate from X, Y, and Z.
+	auto position = std::make_tuple(
+		x,
+		y,
+		z
+	);
+
+	// Insert the block into the map at that position.
+	blocks.insert_or_assign(position, block);
+}
+
+// Loads blocks from a world file.
+//
+// Expected format for each line:
+// X Y Z BlockType
+//
+// Example:
+// 0 0 0 Grass
+bool World::loadFromFile(const std::string& filename)
+{
+	std::ifstream file(filename);
+
+	// If the file could not be opened, loading failed.
+	if (!file.is_open())
+	{
+		return false;
+	}
+
+	int x;
+	int y;
+	int z;
+	std::string blockTypeName;
+
+	// Read one block at a time until the file ends.
+	while (file >> x >> y >> z >> blockTypeName)
+	{
+		if (blockTypeName == "Grass")
+		{
+			Block block(BlockType::Grass);
+
+			placeBlock(
+				x,
+				y,
+				z,
+				block
+			);
+		}
+	}
+
+	return true;
+}

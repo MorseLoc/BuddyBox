@@ -18,6 +18,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Block.h"
+#include "Player.h"
+#include "World.h"
+
 //1
 int main()
 {
@@ -72,21 +76,79 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
+		// 1.5.1
+		// Enables depth testing.
+		//
+		// This allows OpenGL to understand which surfaces are closer
+		// to the camera and which surfaces are hidden behind them.
+		//
+		// This is necessary for proper 3D objects like cubes.
+		glEnable(GL_DEPTH_TEST);
 
 	// 1.6
-	// These are the 3 corner points of our triangle.
-	// Each group of 3 numbers is X, Y, Z.
-	float squareVertices[] =
-	{
-		// Triangle 1
-		-0.5f,  0.5f, 0.0f,   // Top-left
-		-0.5f, -0.5f, 0.0f,   // Bottom-left
-		 0.5f,  0.5f, 0.0f,   // Top-right
+	// These vertices create a cube.
+	//
+	// A cube has 6 faces.
+	// Each face needs 2 triangles.
+	// Each triangle needs 3 vertices.
+	//
+	// 6 faces × 2 triangles × 3 vertices = 36 vertices.
 
-		 // Triangle 2
-		 0.5f,  0.5f, 0.0f,   // Top-right
-		-0.5f, -0.5f, 0.0f,   // Bottom-left
-		 0.5f, -0.5f, 0.0f,    // Bottom-right
+	float cubeVertices[] =
+	{
+		// FRONT FACE
+		-0.5f, -0.5f,  0.5f,
+		 0.5f, -0.5f,  0.5f,
+		 0.5f,  0.5f,  0.5f,
+
+		 0.5f,  0.5f,  0.5f,
+		-0.5f,  0.5f,  0.5f,
+		-0.5f, -0.5f,  0.5f,
+
+		// BACK FACE
+		-0.5f, -0.5f, -0.5f,
+		-0.5f,  0.5f, -0.5f,
+		 0.5f,  0.5f, -0.5f,
+
+		 0.5f,  0.5f, -0.5f,
+		 0.5f, -0.5f, -0.5f,
+		-0.5f, -0.5f, -0.5f,
+
+		// LEFT FACE
+		-0.5f,  0.5f,  0.5f,
+		-0.5f,  0.5f, -0.5f,
+		-0.5f, -0.5f, -0.5f,
+
+		-0.5f, -0.5f, -0.5f,
+		-0.5f, -0.5f,  0.5f,
+		-0.5f,  0.5f,  0.5f,
+
+		// RIGHT FACE
+		 0.5f,  0.5f,  0.5f,
+		 0.5f, -0.5f,  0.5f,
+		 0.5f, -0.5f, -0.5f,
+
+		 0.5f, -0.5f, -0.5f,
+		 0.5f,  0.5f, -0.5f,
+		 0.5f,  0.5f,  0.5f,
+
+		 // TOP FACE
+		 -0.5f,  0.5f, -0.5f,
+		 -0.5f,  0.5f,  0.5f,
+		  0.5f,  0.5f,  0.5f,
+
+		  0.5f,  0.5f,  0.5f,
+		  0.5f,  0.5f, -0.5f,
+		 -0.5f,  0.5f, -0.5f,
+
+		 // BOTTOM FACE
+		 -0.5f, -0.5f, -0.5f,
+		  0.5f, -0.5f, -0.5f,
+		  0.5f, -0.5f,  0.5f,
+
+		  0.5f, -0.5f,  0.5f,
+		 -0.5f, -0.5f,  0.5f,
+		 -0.5f, -0.5f, -0.5f
 	};
 
 	// 1.7
@@ -106,8 +168,8 @@ int main()
 	// Copy our square vertex data from normal memory into GPU memory.
 	glBufferData(
 		GL_ARRAY_BUFFER,
-		sizeof(squareVertices),
-		squareVertices,
+		sizeof(cubeVertices),
+		cubeVertices,
 		GL_STATIC_DRAW
 	);
 
@@ -230,15 +292,29 @@ int main()
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
-	// 1.12
+	//@Change SECTION 1.12 MOVED TO PLAYER.CPP
+
+	// 1.12 (NEW)
+	// Create a player object to represent the player in the world.
+	// Creates the player using the default values from Player.cpp.
+	Player player;
+
+	// Create the game world.
+	World world;
+
+	// THIS IS WHERE YOU GIVE THE WORLD NAME OF THE FILE YOU WANT TO LOAD.
+	if (!world.loadFromFile("test.world"))
+	{
+		std::cout << "Failed to load test.world\n";
+
+		std::cout << "Blocks loaded: " << world.blocks.size() << "\n";
+	}
+
 	// Stores the camera's position in the 3D world.
-	//
-	// X = left/right
-	// Y = up/down
-	// Z = forward/backward
-	//
-	// The camera starts 3 units away from the square.
-	glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
+	glm::vec3 cameraPosition = player.position;
+
+	//Was added before the playerPosition variable, but is now replaced by it. It is kept here for reference.
+	//glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
 
 	// 1.12.1
 	// The direction the camera is looking.
@@ -249,9 +325,12 @@ int main()
 	// Defines which direction is "up" for the camera.
 	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-	// 1.12.3
-	// Controls how fast the camera moves.
-	float cameraSpeed = 0.05f;
+	//@change SECTION 1.12.3 MOVED TO PLAYER.CPP
+		
+		// 1.12.3.1
+		// Stores the time between the current frame and the last frame. (used for time-based movement, vice frame-based movement)
+		float deltaTime = 0.0f;
+		float lastFrame = 0.0f;
 
 	// 1.12.4
 	// Stores the camera's horizontal rotation.
@@ -279,34 +358,35 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		// 1.13.1
-		// CAMERA MOVEMENT
-		// Checks which movement keys are currently being held.
+		// Calculate how much time has passed since the previous frame.
+		float currentFrame = static_cast<float>(glfwGetTime());
 
-		// W = move forward
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		{
-			cameraPosition += cameraSpeed * cameraFront;
-		}
+		deltaTime = currentFrame - lastFrame;
 
-		// S = move backward
-		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		{
-			cameraPosition -= cameraSpeed * cameraFront;
-		}
+		lastFrame = currentFrame;
 
-		// A = move left
-		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		{
-			cameraPosition -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-		}
+		//@change SECTION 1.13.2 MOVED TO PLAYER.CPP
 
-		// D = move right
-		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		{
-			cameraPosition += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-		}
+		// 1.13.2 (NEW)
+		// Tell the Player object to handle WASD movement.
+		//
+		// We give it:
+		// window = lets Player.cpp check the keyboard
+		// deltaTime = keeps movement speed consistent
+		// cameraFront = tells the player which way "forward" is
+		// cameraUp = helps calculate left and right
+		player.move(
+			window,
+			deltaTime,
+			cameraFront,
+			cameraUp
+		);
 
-		// 1.13.1.1
+		// 1.13.2.1
+		// Keep the camera attached to the player's position.
+		cameraPosition = player.position;
+
+		// 1.13.2.2
 		// Get the mouse's current position.
 		double mouseX;
 		double mouseY;
@@ -329,7 +409,7 @@ int main()
 		yaw += mouseOffsetX;
 		pitch += mouseOffsetY;
 
-		// 1.13.1.1.1
+		// 1.13.2.2.1
 		// Prevents the camera from flipping upside down.
 		if (pitch > 89.0f)
 		{
@@ -341,7 +421,7 @@ int main()
 			pitch = -89.0f;
 		}
 
-		// 1.13.1.1.2
+		// 1.13.2.2.2
 		// Convert yaw and pitch into a 3D direction.
 		glm::vec3 direction;
 
@@ -352,12 +432,9 @@ int main()
 		// Normalize keeps the direction length equal to 1.
 		cameraFront = glm::normalize(direction);
 
-		// 1.13.1.2
-		// Create the MODEL matrix.
-		// This controls where the square exists in the world.
-		glm::mat4 model = glm::mat4(1.0f);
-
-		// 1.13.1.3
+		// 1.13.2.3 REMOVED
+		
+		// 1.13.2.4
 		// Create the VIEW matrix.
 		// This represents the camera looking from cameraPosition
 		// toward the direction stored in cameraFront.
@@ -367,7 +444,7 @@ int main()
 			cameraUp
 		);
 
-		// 1.13.1.4
+		// 1.13.2.5
 		// Get the CURRENT size of the drawable window.
 		int windowWidth;
 		int windowHeight;
@@ -401,14 +478,13 @@ int main()
 			100.0f
 		);
 
-		// 1.13.2
+		// 1.13.3
 		// Choose the color OpenGL will use when clearing the screen.
 		// Values are: Red, Green, Blue, Alpha.
 		glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
-		//1.13.3
-		// Erase the previous frame and fill it with the color above.
-		glClear(GL_COLOR_BUFFER_BIT);
+		// Clear both the old colors and the old depth information.
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//1.13.3.1 CREATION OF TWO TRIANGLES TO FORM A SQUARE
 		// Use the shader program we created.
@@ -417,12 +493,6 @@ int main()
 		// 1.13.3.1.1
 		// Send the MODEL matrix to the shader.
 		int modelLocation = glGetUniformLocation(shaderProgram, "model");
-		glUniformMatrix4fv(
-			modelLocation,
-			1,
-			GL_FALSE,
-			glm::value_ptr(model)
-		);
 
 		// Send the VIEW matrix to the shader.
 		int viewLocation = glGetUniformLocation(shaderProgram, "view");
@@ -445,23 +515,57 @@ int main()
 		// Use the VAO that describes our square's vertex data.
 		glBindVertexArray(VAO);
 
-		//1.13.3.1.2 Two triangles are drawn to form a square. The first triangle is drawn in red, and the second triangle is drawn in blue.
-		// Find the shader's shapeColor variable.
+		// 1.13.3.1.2
 		int colorLocation = glGetUniformLocation(shaderProgram, "shapeColor");
 
-		// Set the color to RED.
-		glUniform4f(colorLocation, 1.0f, 0.0f, 0.0f, 1.0f);
+		// Give our first cube a temporary green color.
+		glUniform4f(
+			colorLocation,
+			0.2f,
+			0.8f,
+			0.3f,
+			1.0f
+		);
 
-		// Draw vertices 0, 1, and 2.
-		// These make Triangle 1.
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		// Draw all 36 vertices that make up the cube.
+		// Now changed to draw all blocks in the world instead of just one cube.
+	
+		// Draw every block stored in the world.
+		for (const auto& entry : world.blocks)
+		{
+			// Get the grid coordinate.
+			int x = std::get<0>(entry.first);
+			int y = std::get<1>(entry.first);
+			int z = std::get<2>(entry.first);
 
-		// Change the color to BLUE.
-		glUniform4f(colorLocation, 0.0f, 0.0f, 1.0f, 1.0f);
+			// Start with a fresh model matrix for this block.
+			glm::mat4 model = glm::mat4(1.0f);
 
-		// Draw vertices 3, 4, and 5.
-		// These make Triangle 2.
-		glDrawArrays(GL_TRIANGLES, 3, 3);
+			// Move the cube to this block's grid position.
+			model = glm::translate(
+				model,
+				glm::vec3(
+					static_cast<float>(x),
+					static_cast<float>(y),
+					static_cast<float>(z)
+				)
+			);
+
+			// Send this block's position to the shader.
+			glUniformMatrix4fv(
+				modelLocation,
+				1,
+				GL_FALSE,
+				glm::value_ptr(model)
+			);
+
+			// Draw this block.
+			glDrawArrays(
+				GL_TRIANGLES,
+				0,
+				36
+			);
+		}
 
 		//1.13.4
 		// Display the frame we just created.

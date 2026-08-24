@@ -9,7 +9,22 @@ find_package(OpenGL REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 
-add_executable(BuddyBox "BuddyBox.cpp" "BuddyBox.h")
+add_executable(BuddyBox
+    "BuddyBox.cpp"
+    "BuddyBox.h"
+    "Block.cpp"
+    "Block.h"
+    "player.cpp"
+    "player.h"
+    "World.cpp"
+    "World.h"
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/test.world"
+    "${CMAKE_CURRENT_BINARY_DIR}/test.world"
+    COPYONLY
+)
 
 target_link_libraries(BuddyBox PRIVATE glfw glad::glad glm::glm OpenGL::GL)
 
