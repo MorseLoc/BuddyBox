@@ -2,6 +2,10 @@
 
 #include <GLFW/glfw3.h>
 
+#include "World.h"
+
+#include <cmath>
+
 
 // Creates a new Player and gives it default values.
 Player::Player()
@@ -31,19 +35,58 @@ Player::Player()
 	speed = 3.0f;
 }
 
+// Checks whether the player's hitbox would overlap
+// any solid block in the world.
+bool Player::collidesWithWorld(
+	const glm::vec3& testPosition,
+	const World& world
+) const
+{
+	// Calculate the outer edges of the player's hitbox.
+	glm::vec3 playerMin = testPosition - (size / 2.0f);
+	glm::vec3 playerMax = testPosition + (size / 2.0f);
+
+	// Convert those edges into block-grid coordinates.
+	int minX = static_cast<int>(floor(playerMin.x + 0.5f));
+	int maxX = static_cast<int>(floor(playerMax.x + 0.5f));
+
+	int minY = static_cast<int>(floor(playerMin.y + 0.5f));
+	int maxY = static_cast<int>(floor(playerMax.y + 0.5f));
+
+	int minZ = static_cast<int>(floor(playerMin.z + 0.5f));
+	int maxZ = static_cast<int>(floor(playerMax.z + 0.5f));
+
+	// Check every grid cell the player's hitbox touches.
+	for (int x = minX; x <= maxX; x++)
+	{
+		for (int y = minY; y <= maxY; y++)
+		{
+			for (int z = minZ; z <= maxZ; z++)
+			{
+				if (world.isSolidAt(x, y, z))
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
 
 // Handles WASD movement.
 void Player::move(
 	GLFWwindow* window,
 	float deltaTime,
 	const glm::vec3& cameraFront,
-	const glm::vec3& cameraUp
+	const glm::vec3& cameraUp,
+	const World& world
 )
 {
 	// Create a flat forward direction.
 	//
-	// We ignore cameraFront.y so looking up or down
-	// does not make the player fly.
+	// This removes the up/down part of cameraFront
+	// so looking up or down does not make the player fly.
 	glm::vec3 flatFront = glm::normalize(
 		glm::vec3(
 			cameraFront.x,
@@ -59,30 +102,72 @@ void Player::move(
 	);
 
 
+	// Start with no movement.
+	glm::vec3 movement = glm::vec3(
+		0.0f,
+		0.0f,
+		0.0f
+	);
+
+
 	// W = forward
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		position += flatFront * speed * deltaTime;
+		movement += flatFront;
 	}
 
 
 	// S = backward
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		position -= flatFront * speed * deltaTime;
+		movement -= flatFront;
 	}
 
 
 	// A = left
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		position -= rightDirection * speed * deltaTime;
+		movement -= rightDirection;
 	}
 
 
 	// D = right
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		position += rightDirection * speed * deltaTime;
+		movement += rightDirection;
+	}
+
+
+	// If the player is trying to move,
+	// normalize the direction so diagonal movement
+	// is not faster than straight movement.
+	if (glm::length(movement) > 0.0f)
+	{
+		movement = glm::normalize(movement);
+
+		// Apply walking speed and frame time.
+		movement *= speed * deltaTime;
+	}
+
+
+	// Try moving on the X axis first.
+	glm::vec3 testPosition = position;
+
+	testPosition.x += movement.x;
+
+	if (!collidesWithWorld(testPosition, world))
+	{
+		position.x = testPosition.x;
+	}
+
+
+	// Try moving on the Z axis separately.
+	testPosition = position;
+
+	testPosition.z += movement.z;
+
+	if (!collidesWithWorld(testPosition, world))
+	{
+		position.z = testPosition.z;
 	}
 }

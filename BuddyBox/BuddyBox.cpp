@@ -514,7 +514,8 @@ int main()
 				window,
 				deltaTime,
 				cameraFront,
-				cameraUp
+				cameraUp,
+				world
 			);
 
 			// 1.13.2.1
@@ -616,7 +617,8 @@ int main()
 			// 1.13.3
 			// Choose the color OpenGL will use when clearing the screen.
 			// Values are: Red, Green, Blue, Alpha.
-			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+			//THIS IS THE SKY
+			glClearColor(0.55f, 0.70f, 0.90f, 1.0f);
 
 			// Clear both the old colors and the old depth information.
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

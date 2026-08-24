@@ -7,6 +7,9 @@
 // to include all of GLFW inside Player.h.
 struct GLFWwindow;
 
+// Forward declaration.
+struct World;
+
 
 // Represents the player in the world.
 struct Player
@@ -36,6 +39,12 @@ struct Player
 	// Gives a new player its starting values.
 	Player();
 
+	// Checks whether the player's collision box
+	// would overlap any solid block in the world.
+	bool collidesWithWorld(
+		const glm::vec3& testPosition,
+		const World& world
+	) const;
 
 	// Handles the player's WASD movement.
 	//
@@ -47,6 +56,7 @@ struct Player
 		GLFWwindow* window,
 		float deltaTime,
 		const glm::vec3& cameraFront,
-		const glm::vec3& cameraUp
+		const glm::vec3& cameraUp,
+		const World& world
 	);
 };
