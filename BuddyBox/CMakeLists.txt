@@ -24,6 +24,8 @@ add_executable(BuddyBox
     "camera.h"
     "textureManager.cpp"
     "textureManager.h"
+    "inventory.cpp"
+    "inventory.h"
 )
 
 configure_file(
@@ -37,6 +39,12 @@ file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/textures")
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/textures/artdex.png"
     "${CMAKE_CURRENT_BINARY_DIR}/textures/artdex.png"
+    COPYONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/textures/ScrollWheel.png"
+    "${CMAKE_CURRENT_BINARY_DIR}/textures/ScrollWheel.png"
     COPYONLY
 )
 

@@ -28,6 +28,21 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include "textureManager.h"
+#include "inventory.h"
+
+// Stores mouse-wheel movement until the game loop handles it.
+double scrollAmount = 0.0;
+
+
+// GLFW calls this whenever the mouse wheel moves.
+void scrollCallback(
+	GLFWwindow* window,
+	double xOffset,
+	double yOffset
+)
+{
+	scrollAmount += yOffset;
+}
 
 //1
 int main()
@@ -73,6 +88,12 @@ int main()
 	// Locks the mouse cursor inside the BuddyBox window.
 	// The cursor becomes invisible so the mouse can control the camera.
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	// This tells GLFW to call the scrollCallback function whenever the mouse wheel is moved.
+	glfwSetScrollCallback(
+		window,
+		scrollCallback
+	);
 
 	// 1.5
 	// Loads modern OpenGL functions so BuddyBox can use them.
@@ -128,6 +149,9 @@ int main()
 
 	// Create a camera object to represent the player's view in the world.
 	Camera camera;
+
+	// create an inventory object to represent the player's hotbar and selected block type.
+	Inventory inventory;
 
 	// THIS IS WHERE YOU GIVE THE WORLD NAME OF THE FILE YOU WANT TO LOAD.
 	if (!world.loadFromFile("test.world"))
@@ -250,7 +274,7 @@ int main()
 				previousZ
 			))
 			{
-				Block block(BlockType::Stone);
+				Block block(inventory.getSelectedBlockType());
 
 				// Create the player's collision-box edges.
 				glm::vec3 playerMin =
@@ -510,6 +534,19 @@ int main()
 		// Check for things like mouse, keyboard, resizing, and closing.
 		glfwPollEvents();
 	}
+
+	// Move through the hotbar with the mouse wheel.
+	if (scrollAmount > 0.0)
+	{
+		inventory.cycleSlot(-1);
+	}
+	else if (scrollAmount < 0.0)
+	{
+		inventory.cycleSlot(1);
+	}
+
+	// We handled this scroll.
+	scrollAmount = 0.0;
 
 	// 1.14 
 	// After the loop exits (when the window is closed), the program cleans up by destroying the window and terminating GLFW.
