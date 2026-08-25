@@ -116,6 +116,11 @@ const glm::vec3& Camera::getUp() const
 	return up;
 }
 
+const glm::vec3& Camera::getPosition() const
+{
+	return position;
+}
+
 void Camera::updatePosition(
 	const glm::vec3& playerPosition
 )

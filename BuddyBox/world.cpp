@@ -3,6 +3,8 @@
 #include <fstream>
 #include <string>
 
+#include <cmath>
+
 // Checks whether the world already contains a block
 // at the given X, Y, Z grid position.
 bool World::hasBlock(
@@ -67,6 +69,74 @@ void World::placeBlock(
 
 	// Insert the block into the map at that position.
 	blocks.insert_or_assign(position, block);
+}
+
+// Removes a block from the given grid position.
+void World::removeBlock(
+	int x,
+	int y,
+	int z
+)
+{
+	auto position = std::make_tuple(
+		x,
+		y,
+		z
+	);
+
+	blocks.erase(position);
+}
+
+// Finds the first block hit by a ray.
+bool World::raycastBlock(
+	const glm::vec3& origin,
+	const glm::vec3& direction,
+	float maxDistance,
+	int& hitX,
+	int& hitY,
+	int& hitZ,
+	int& previousX,
+	int& previousY,
+	int& previousZ
+) const
+{
+	const float stepSize = 0.05f;
+
+	glm::vec3 rayPosition = origin;
+
+	int lastX = static_cast<int>(floor(rayPosition.x + 0.5f));
+	int lastY = static_cast<int>(floor(rayPosition.y + 0.5f));
+	int lastZ = static_cast<int>(floor(rayPosition.z + 0.5f));
+
+	for (float distance = 0.0f;
+		distance <= maxDistance;
+		distance += stepSize)
+	{
+		rayPosition = origin + direction * distance;
+
+		int x = static_cast<int>(floor(rayPosition.x + 0.5f));
+		int y = static_cast<int>(floor(rayPosition.y + 0.5f));
+		int z = static_cast<int>(floor(rayPosition.z + 0.5f));
+
+		if (hasBlock(x, y, z))
+		{
+			hitX = x;
+			hitY = y;
+			hitZ = z;
+
+			previousX = lastX;
+			previousY = lastY;
+			previousZ = lastZ;
+
+			return true;
+		}
+
+		lastX = x;
+		lastY = y;
+		lastZ = z;
+	}
+
+	return false;
 }
 
 // Loads blocks from a world file.

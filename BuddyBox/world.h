@@ -6,6 +6,7 @@
 
 #include "Block.h"
 
+#include <glm/glm.hpp>
 
 // Represents the block world.
 struct World
@@ -47,6 +48,31 @@ struct World
 		const Block& block
 	);
 
+	// Removes a block from this grid position.
+	void removeBlock(
+		int x,
+		int y,
+		int z
+	);
+
+	// Finds the first block hit by a ray.
+	//
+	// origin = where the ray starts
+	// direction = which way the ray travels
+	// maxDistance = how far the ray can reach
+	//
+	// Returns true if a block was found.
+	bool raycastBlock(
+		const glm::vec3& origin,
+		const glm::vec3& direction,
+		float maxDistance,
+		int& hitX,
+		int& hitY,
+		int& hitZ,
+		int& previousX,
+		int& previousY,
+		int& previousZ
+	) const;
 
 	// Loads a world from a text file.
 	bool loadFromFile(

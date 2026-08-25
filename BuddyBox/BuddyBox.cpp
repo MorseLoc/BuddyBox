@@ -145,6 +145,10 @@ int main()
 	float deltaTime = 0.0f;
 	float lastFrame = 0.0f;
 
+	// Store the previous state of the mouse buttons to detect clicks.
+	bool leftMouseWasPressed = false;
+	bool rightMouseWasPressed = false;
+
 	//@change Camera section moved to camera.cpp
 	// 1.13  
 	// while loop that continues running until the window is closed. 
@@ -193,6 +197,115 @@ int main()
 		camera.updatePosition(
 			player.position
 		);
+
+		// Check mouse buttons.
+		bool leftMousePressed =
+			glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+
+		bool rightMousePressed =
+			glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+
+
+		// Only trigger once when the button is first pressed.
+		if (leftMousePressed && !leftMouseWasPressed)
+		{
+			int hitX, hitY, hitZ;
+			int previousX, previousY, previousZ;
+
+			if (world.raycastBlock(
+				camera.getPosition(),
+				camera.getFront(),
+				5.0f,
+				hitX,
+				hitY,
+				hitZ,
+				previousX,
+				previousY,
+				previousZ
+			))
+			{
+				world.removeBlock(
+					hitX,
+					hitY,
+					hitZ
+				);
+			}
+		}
+
+
+		if (rightMousePressed && !rightMouseWasPressed)
+		{
+			int hitX, hitY, hitZ;
+			int previousX, previousY, previousZ;
+
+			if (world.raycastBlock(
+				camera.getPosition(),
+				camera.getFront(),
+				5.0f,
+				hitX,
+				hitY,
+				hitZ,
+				previousX,
+				previousY,
+				previousZ
+			))
+			{
+				Block block(BlockType::Stone);
+
+				// Create the player's collision-box edges.
+				glm::vec3 playerMin =
+					player.position - (player.size / 2.0f);
+
+				glm::vec3 playerMax =
+					player.position + (player.size / 2.0f);
+
+
+				// Create the new block's edges.
+				//
+				// Blocks are centered on their grid position,
+				// so each side extends 0.5 blocks outward.
+				glm::vec3 blockMin(
+					previousX - 0.5f,
+					previousY - 0.5f,
+					previousZ - 0.5f
+				);
+
+				glm::vec3 blockMax(
+					previousX + 0.5f,
+					previousY + 0.5f,
+					previousZ + 0.5f
+				);
+
+
+				// Check whether the new block would overlap the player.
+				bool overlapsPlayer =
+					playerMax.x > blockMin.x &&
+					playerMin.x < blockMax.x &&
+
+					playerMax.y > blockMin.y &&
+					playerMin.y < blockMax.y &&
+
+					playerMax.z > blockMin.z &&
+					playerMin.z < blockMax.z;
+
+
+				// Only place the block if the player is not inside it.
+				if (!overlapsPlayer)
+				{
+					world.placeBlock(
+						previousX,
+						previousY,
+						previousZ,
+						block
+					);
+				}
+			}
+		}
+
+
+		// Remember mouse state for next frame.
+		leftMouseWasPressed = leftMousePressed;
+		rightMouseWasPressed = rightMousePressed;
 	
 		//Removed the following lines since cameraFront and cameraUp are now handled by the Camera class.
 

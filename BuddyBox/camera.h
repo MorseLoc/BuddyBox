@@ -27,8 +27,10 @@ public:
 	glm::mat4 getViewMatrix() const;
 
 	// Gives Player.cpp the current camera directions.
+	// Gives the camera's front and up vectors, as well as its position.
 	const glm::vec3& getFront() const;
 	const glm::vec3& getUp() const;
+	const glm::vec3& getPosition() const;
 
 
 private:
