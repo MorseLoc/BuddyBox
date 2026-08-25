@@ -26,6 +26,7 @@
 #include "Player.h"
 #include "World.h"
 #include "Renderer.h"
+#include "Camera.h"
 
 //1
 int main()
@@ -269,352 +270,279 @@ int main()
 	unsigned int shaderProgram =
 		renderer.getShaderProgram();
 
-		//@Change SECTION 1.12 MOVED TO PLAYER.CPP
+	//@Change SECTION 1.12 MOVED TO PLAYER.CPP
 
-		// 1.12 (NEW)
-		// Create a player object to represent the player in the world.
-		// Creates the player using the default values from Player.cpp.
-		Player player;
+	// 1.12 (NEW)
+	// Create a player object to represent the player in the world.
+	// Creates the player using the default values from Player.cpp.
+	Player player;
 
-		// Create the game world.
-		World world;
+	// Create the game world.
+	World world;
 
-		// THIS IS WHERE YOU GIVE THE WORLD NAME OF THE FILE YOU WANT TO LOAD.
-		if (!world.loadFromFile("test.world"))
-		{
-			std::cout << "Failed to load test.world\n";
+	// Create a camera object to represent the player's view in the world.
+	Camera camera;
 
-			std::cout << "Blocks loaded: " << world.blocks.size() << "\n";
-		}
+	// THIS IS WHERE YOU GIVE THE WORLD NAME OF THE FILE YOU WANT TO LOAD.
+	if (!world.loadFromFile("test.world"))
+	{
+		std::cout << "Failed to load test.world\n";
 
-		// Stores the camera's position in the 3D world.
-		glm::vec3 cameraPosition = player.position;
-
-		//Was added before the playerPosition variable, but is now replaced by it. It is kept here for reference.
-		//glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-
-		// 1.12.1
-		// The direction the camera is looking.
-		// Negative Z points forward into the screen.
-		glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-
-		// 1.12.2
-		// Defines which direction is "up" for the camera.
-		glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-		//@change SECTION 1.12.3 MOVED TO PLAYER.CPP
-
-			// 1.12.3.1
-			// Stores the time between the current frame and the last frame. (used for time-based movement, vice frame-based movement)
-		float deltaTime = 0.0f;
-		float lastFrame = 0.0f;
-
-		// 1.12.4
-		// Stores the camera's horizontal rotation.
-		// -90 degrees means we initially look toward negative Z.
-		float yaw = -90.0f;
-
-		// 1.12.5
-		// Stores the camera's vertical rotation.
-		// 0 means we begin looking straight ahead.
-		float pitch = 0.0f;
-
-		// 1.12.6
-		// Stores the mouse's previous position.
-		// Since our window is 800 x 600, its center is 400 x 300.
-		double lastMouseX = 400.0;
-		double lastMouseY = 300.0;
-
-		// 1.12.7
-		// Controls how strongly mouse movement rotates the camera.
-		float mouseSensitivity = 0.1f;
-
-		// 1.13  
-		// while loop that continues running until the window is closed. 
-		// Inside the loop, glfwPollEvents() is called to process events such as keyboard and mouse input, window resizing, etc.
-		while (!glfwWindowShouldClose(window))
-		{
-			// 1.13.1
-			// Calculate how much time has passed since the previous frame.
-			float currentFrame = static_cast<float>(glfwGetTime());
-
-			deltaTime = currentFrame - lastFrame;
-
-			lastFrame = currentFrame;
-			
-			// Prevent huge movement jumps if the game
-			// temporarily pauses, such as while moving the window.
-			if (deltaTime > 0.05f)
-			{
-				deltaTime = 0.05f;
-			}
-
-			//@change SECTION 1.13.2 MOVED TO PLAYER.CPP
-
-			// 1.13.2 (NEW)
-			// Tell the Player object to handle WASD movement.
-			//
-			// We give it:
-			// window = lets Player.cpp check the keyboard
-			// deltaTime = keeps movement speed consistent
-			// cameraFront = tells the player which way "forward" is
-			// cameraUp = helps calculate left and right
-			player.move(
-				window,
-				deltaTime,
-				cameraFront,
-				cameraUp,
-				world
-			);
-
-			// 1.13.2.1
-			// Keep the camera attached to the player's position. UPDATED TO BE SLIGHTLY ABOVE THE PLAYER'S POSITION (0.7f) SO THE CAMERA IS NOT AT GROUND LEVEL.
-			cameraPosition = player.position + glm::vec3(
-				0.0f,
-				0.7f,
-				0.0f
-			);
-
-			// 1.13.2.2
-			// Get the mouse's current position.
-			double mouseX;
-			double mouseY;
-
-			glfwGetCursorPos(window, &mouseX, &mouseY);
-
-			// Measure how far the mouse moved since the previous frame.
-			float mouseOffsetX = static_cast<float>(mouseX - lastMouseX);
-			float mouseOffsetY = static_cast<float>(lastMouseY - mouseY);
-
-			// Save the current position for the next frame.
-			lastMouseX = mouseX;
-			lastMouseY = mouseY;
-
-			// Apply mouse sensitivity.
-			mouseOffsetX *= mouseSensitivity;
-			mouseOffsetY *= mouseSensitivity;
-
-			// Change our horizontal and vertical camera rotation.
-			yaw += mouseOffsetX;
-			pitch += mouseOffsetY;
-
-			// 1.13.2.2.1
-			// Prevents the camera from flipping upside down.
-			if (pitch > 89.0f)
-			{
-				pitch = 89.0f;
-			}
-
-			if (pitch < -89.0f)
-			{
-				pitch = -89.0f;
-			}
-
-			// 1.13.2.2.2
-			// Convert yaw and pitch into a 3D direction.
-			glm::vec3 direction;
-
-			direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-			direction.y = sin(glm::radians(pitch));
-			direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-
-			// Normalize keeps the direction length equal to 1.
-			cameraFront = glm::normalize(direction);
-
-			// 1.13.2.3 REMOVED
-
-			// 1.13.2.4
-			// Create the VIEW matrix.
-			// This represents the camera looking from cameraPosition
-			// toward the direction stored in cameraFront.
-			glm::mat4 view = glm::lookAt(
-				cameraPosition,
-				cameraPosition + cameraFront,
-				cameraUp
-			);
-
-			// 1.13.2.5
-			// Get the CURRENT size of the drawable window.
-			int windowWidth;
-			int windowHeight;
-
-			glfwGetFramebufferSize(
-				window,
-				&windowWidth,
-				&windowHeight
-			);
-
-			// Prevent problems if the window is minimized.
-			if (windowHeight == 0)
-			{
-				windowHeight = 1;
-			}
-
-			// Tell OpenGL to use the entire available window.
-			glViewport(
-				0,
-				0,
-				windowWidth,
-				windowHeight
-			);
-
-			// Create perspective using the CURRENT window shape.
-			glm::mat4 projection = glm::perspective(
-				glm::radians(45.0f),
-				static_cast<float>(windowWidth) /
-				static_cast<float>(windowHeight),
-				0.1f,
-				100.0f
-			);
-
-			// 1.13.3
-			// Choose the color OpenGL will use when clearing the screen.
-			// Values are: Red, Green, Blue, Alpha.
-			//THIS IS THE SKY
-			glClearColor(0.55f, 0.70f, 0.90f, 1.0f);
-
-			// Clear both the old colors and the old depth information.
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			//1.13.3.1 CREATION OF TWO TRIANGLES TO FORM A SQUARE
-			// Use the shader program we created.
-			glUseProgram(shaderProgram);
-
-			// Tell OpenGL we want to use texture unit 0.
-			glActiveTexture(GL_TEXTURE0);
-
-			// Bind the grass texture to texture unit 0.
-			glBindTexture(
-				GL_TEXTURE_2D,
-				grassTexture
-			);
-
-			// Find the blockTexture variable inside the shader.
-			int textureLocation = glGetUniformLocation(
-				shaderProgram,
-				"blockTexture"
-			);
-
-			// Tell the shader that blockTexture should use texture unit 0.
-			glUniform1i(
-				textureLocation,
-				0
-			);
-
-			// 1.13.3.1.1
-			// Send the MODEL matrix to the shader.
-			int modelLocation = glGetUniformLocation(shaderProgram, "model");
-
-			// Send the VIEW matrix to the shader.
-			int viewLocation = glGetUniformLocation(shaderProgram, "view");
-			glUniformMatrix4fv(
-				viewLocation,
-				1,
-				GL_FALSE,
-				glm::value_ptr(view)
-			);
-
-			// Send the PROJECTION matrix to the shader.
-			int projectionLocation = glGetUniformLocation(shaderProgram, "projection");
-			glUniformMatrix4fv(
-				projectionLocation,
-				1,
-				GL_FALSE,
-				glm::value_ptr(projection)
-			);
-
-			// Use the VAO that describes our square's vertex data. REMOVED 
-			// This VAO was created in Renderer.cpp.
-			renderer.bindCube();
-
-			//REMOVED KEPT FOR REFERENCE:
-			// 1.13.3.1.2
-			//int colorLocation = glGetUniformLocation(shaderProgram, "shapeColor");
-
-			// Give our first cube a temporary green color.
-			//glUniform4f(
-			//	colorLocation,
-			//	0.2f,
-			//	0.8f,
-			//	0.3f,
-			//	1.0f
-			//);
-
-			// Draw all 36 vertices that make up the cube.
-			// Now changed to draw all blocks in the world instead of just one cube.
-
-			// Draw every block stored in the world.
-			for (const auto& entry : world.blocks)
-			{
-
-				// Get the actual block stored at this grid position.
-				const Block& block = entry.second;
-
-
-				// Choose the correct texture for this block type.
-				if (block.type == BlockType::Grass)
-				{
-					glBindTexture(
-						GL_TEXTURE_2D,
-						grassTexture
-					);
-				}
-				else if (block.type == BlockType::Spawner)
-				{
-					glBindTexture(
-						GL_TEXTURE_2D,
-						spawnerTexture
-					);
-				}
-				// Get the grid coordinate.
-				int x = std::get<0>(entry.first);
-				int y = std::get<1>(entry.first);
-				int z = std::get<2>(entry.first);
-
-				// Start with a fresh model matrix for this block.
-				glm::mat4 model = glm::mat4(1.0f);
-
-				// Move the cube to this block's grid position.
-				model = glm::translate(
-					model,
-					glm::vec3(
-						static_cast<float>(x),
-						static_cast<float>(y),
-						static_cast<float>(z)
-					)
-				);
-
-				// Send this block's position to the shader.
-				glUniformMatrix4fv(
-					modelLocation,
-					1,
-					GL_FALSE,
-					glm::value_ptr(model)
-				);
-
-				// Draw this block.
-				glDrawArrays(
-					GL_TRIANGLES,
-					0,
-					36
-				);
-			}
-
-			//1.13.4
-			// Display the frame we just created.
-			glfwSwapBuffers(window);
-
-			//1.13.5
-			// Check for things like mouse, keyboard, resizing, and closing.
-			glfwPollEvents();
-		}
-
-		// 1.14 
-		// After the loop exits (when the window is closed), the program cleans up by destroying the window and terminating GLFW.
-		glfwDestroyWindow(window);
-		glfwTerminate();
-
-		// 1.15
-		// ends the program with a return value of 0, indicating successful execution.
-		return 0;
+		std::cout << "Blocks loaded: " << world.blocks.size() << "\n";
 	}
+
+	//@change Camera section moved to camera.cpp
+	//@change SECTION 1.12.3 MOVED TO PLAYER.CPP
+
+		// 1.12.3.1
+		// Stores the time between the current frame and the last frame. (used for time-based movement, vice frame-based movement)
+	float deltaTime = 0.0f;
+	float lastFrame = 0.0f;
+
+	//@change Camera section moved to camera.cpp
+	// 1.13  
+	// while loop that continues running until the window is closed. 
+	// Inside the loop, glfwPollEvents() is called to process events such as keyboard and mouse input, window resizing, etc.
+	while (!glfwWindowShouldClose(window))
+	{
+		// 1.13.1
+		// Calculate how much time has passed since the previous frame.
+		float currentFrame = static_cast<float>(glfwGetTime());
+
+		deltaTime = currentFrame - lastFrame;
+
+		lastFrame = currentFrame;
+
+		// Prevent huge movement jumps if the game
+		// temporarily pauses, such as while moving the window.
+		if (deltaTime > 0.05f)
+		{
+			deltaTime = 0.05f;
+		}
+
+		//@change SECTION 1.13.2 MOVED TO PLAYER.CPP
+
+		// 1.13.2 (NEW)
+		// Tell the Player object to handle WASD movement.
+		//
+		// We give it:
+		// window = lets Player.cpp check the keyboard
+		// deltaTime = keeps movement speed consistent
+		// cameraFront = tells the player which way "forward" is
+		// cameraUp = helps calculate left and right
+
+		//UPDATED TO USE CAMERA OBJECT INSTEAD OF CAMERA FRONT AND CAMERA UP
+		camera.update(
+			window,
+			player.position
+		);
+
+		player.move(
+			window,
+			deltaTime,
+			camera.getFront(),
+			camera.getUp(),
+			world
+		);
+	
+		//Removed the following lines since cameraFront and cameraUp are now handled by the Camera class.
+
+		//Removed cameraFront and cameraUp variables since they are now handled by the Camera class.
+
+		// 1.13.2.3 REMOVED
+
+		// 1.13.2.4
+		// Create the VIEW matrix.
+		// This represents the camera looking from cameraPosition
+		// toward the direction stored in cameraFront.
+
+		// Updated to use the Camera class's getViewMatrix() method 
+		// instead of manually calculating the view matrix using cameraPosition, cameraFront, and cameraUp.
+		glm::mat4 view =
+			camera.getViewMatrix();
+
+		// 1.13.2.5
+		// Get the CURRENT size of the drawable window.
+		int windowWidth;
+		int windowHeight;
+
+		glfwGetFramebufferSize(
+			window,
+			&windowWidth,
+			&windowHeight
+		);
+
+		// Prevent problems if the window is minimized.
+		if (windowHeight == 0)
+		{
+			windowHeight = 1;
+		}
+
+		// Tell OpenGL to use the entire available window.
+		glViewport(
+			0,
+			0,
+			windowWidth,
+			windowHeight
+		);
+
+		// Create perspective using the CURRENT window shape.
+		glm::mat4 projection = glm::perspective(
+			glm::radians(45.0f),
+			static_cast<float>(windowWidth) /
+			static_cast<float>(windowHeight),
+			0.1f,
+			100.0f
+		);
+
+		// 1.13.3
+		// Choose the color OpenGL will use when clearing the screen.
+		// Values are: Red, Green, Blue, Alpha.
+		//THIS IS THE SKY
+		glClearColor(0.55f, 0.70f, 0.90f, 1.0f);
+
+		// Clear both the old colors and the old depth information.
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//1.13.3.1 CREATION OF TWO TRIANGLES TO FORM A SQUARE
+		// Use the shader program we created.
+		glUseProgram(shaderProgram);
+
+		// Tell OpenGL we want to use texture unit 0.
+		glActiveTexture(GL_TEXTURE0);
+
+		// Bind the grass texture to texture unit 0.
+		glBindTexture(
+			GL_TEXTURE_2D,
+			grassTexture
+		);
+
+		// Find the blockTexture variable inside the shader.
+		int textureLocation = glGetUniformLocation(
+			shaderProgram,
+			"blockTexture"
+		);
+
+		// Tell the shader that blockTexture should use texture unit 0.
+		glUniform1i(
+			textureLocation,
+			0
+		);
+
+		// 1.13.3.1.1
+		// Send the MODEL matrix to the shader.
+		int modelLocation = glGetUniformLocation(shaderProgram, "model");
+
+		// Send the VIEW matrix to the shader.
+		int viewLocation = glGetUniformLocation(shaderProgram, "view");
+		glUniformMatrix4fv(
+			viewLocation,
+			1,
+			GL_FALSE,
+			glm::value_ptr(view)
+		);
+
+		// Send the PROJECTION matrix to the shader.
+		int projectionLocation = glGetUniformLocation(shaderProgram, "projection");
+		glUniformMatrix4fv(
+			projectionLocation,
+			1,
+			GL_FALSE,
+			glm::value_ptr(projection)
+		);
+
+		// Use the VAO that describes our square's vertex data. REMOVED 
+		// This VAO was created in Renderer.cpp.
+		renderer.bindCube();
+
+		//REMOVED KEPT FOR REFERENCE:
+		// 1.13.3.1.2
+		//int colorLocation = glGetUniformLocation(shaderProgram, "shapeColor");
+
+		// Give our first cube a temporary green color.
+		//glUniform4f(
+		//	colorLocation,
+		//	0.2f,
+		//	0.8f,
+		//	0.3f,
+		//	1.0f
+		//);
+
+		// Draw all 36 vertices that make up the cube.
+		// Now changed to draw all blocks in the world instead of just one cube.
+
+		// Draw every block stored in the world.
+		for (const auto& entry : world.blocks)
+		{
+
+			// Get the actual block stored at this grid position.
+			const Block& block = entry.second;
+
+
+			// Choose the correct texture for this block type.
+			if (block.type == BlockType::Grass)
+			{
+				glBindTexture(
+					GL_TEXTURE_2D,
+					grassTexture
+				);
+			}
+			else if (block.type == BlockType::Spawner)
+			{
+				glBindTexture(
+					GL_TEXTURE_2D,
+					spawnerTexture
+				);
+			}
+			// Get the grid coordinate.
+			int x = std::get<0>(entry.first);
+			int y = std::get<1>(entry.first);
+			int z = std::get<2>(entry.first);
+
+			// Start with a fresh model matrix for this block.
+			glm::mat4 model = glm::mat4(1.0f);
+
+			// Move the cube to this block's grid position.
+			model = glm::translate(
+				model,
+				glm::vec3(
+					static_cast<float>(x),
+					static_cast<float>(y),
+					static_cast<float>(z)
+				)
+			);
+
+			// Send this block's position to the shader.
+			glUniformMatrix4fv(
+				modelLocation,
+				1,
+				GL_FALSE,
+				glm::value_ptr(model)
+			);
+
+			// Draw this block.
+			glDrawArrays(
+				GL_TRIANGLES,
+				0,
+				36
+			);
+		}
+
+		//1.13.4
+		// Display the frame we just created.
+		glfwSwapBuffers(window);
+
+		//1.13.5
+		// Check for things like mouse, keyboard, resizing, and closing.
+		glfwPollEvents();
+	}
+
+	// 1.14 
+	// After the loop exits (when the window is closed), the program cleans up by destroying the window and terminating GLFW.
+	glfwDestroyWindow(window);
+	glfwTerminate();
+
+	// 1.15
+	// ends the program with a return value of 0, indicating successful execution.
+	return 0;
+}

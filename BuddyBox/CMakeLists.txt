@@ -20,6 +20,8 @@ add_executable(BuddyBox
     "World.h"
     "Renderer.cpp"
     "Renderer.h"
+    "camera.cpp"
+    "camera.h"
 )
 
 configure_file(
