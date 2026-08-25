@@ -29,7 +29,7 @@ Camera::Camera()
 	lastMouseX = 400.0;
 	lastMouseY = 300.0;
 
-	mouseSensitivity = 0.1f;
+	mouseSensitivity = 0.2f;
 }
 
 

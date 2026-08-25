@@ -32,7 +32,7 @@ Player::Player()
 
 	// Walking speed.
 	// 3 world units per second.
-	speed = 3.0f;
+	speed = 6.0f;
 
 	// The player starts with no vertical movement.
 	verticalVelocity = 0.0f;
@@ -178,6 +178,19 @@ void Player::move(
 		position.z = testPosition.z;
 	}
 
+
+	// JUMPING
+	//
+	// The player can only jump while standing
+	// on something solid.
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && grounded)
+	{
+		const float jumpSpeed = 8.0f;
+
+		verticalVelocity = jumpSpeed;
+		grounded = false;
+	}
+
 	// GRAVITY
 	//
 	// Gravity constantly pulls the player's
@@ -205,11 +218,19 @@ void Player::move(
 	}
 	else
 	{
-		// Something stopped our vertical movement.
-		verticalVelocity = 0.0f;
+		// Only a collision while falling means
+		// the player has landed on the ground.
+		if (verticalVelocity < 0.0f)
+		{
+			grounded = true;
+		}
+		else
+		{
+			// We hit something above us.
+			grounded = false;
+		}
 
-		// For now, assume a downward collision
-		// means we landed on the ground.
-		grounded = true;
+		// Stop vertical movement after the collision.
+		verticalVelocity = 0.0f;
 	}
 }
