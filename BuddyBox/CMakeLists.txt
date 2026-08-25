@@ -18,6 +18,8 @@ add_executable(BuddyBox
     "player.h"
     "World.cpp"
     "World.h"
+    "Renderer.cpp"
+    "Renderer.h"
 )
 
 configure_file(
