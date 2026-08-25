@@ -333,7 +333,18 @@ int main()
 
 		//UPDATED TO USE CAMERA OBJECT INSTEAD OF CAMERA FRONT AND CAMERA UP
 		camera.update(
+			window
+		);
+
+		player.move(
 			window,
+			deltaTime,
+			camera.getFront(),
+			camera.getUp(),
+			world
+		);
+
+		camera.updatePosition(
 			player.position
 		);
 

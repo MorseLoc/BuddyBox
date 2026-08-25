@@ -11,10 +11,15 @@ public:
 
 	Camera();
 
-	// Updates the camera from mouse movement
-	// and keeps it attached to the player.
+	// Updates the direction the camera is looking
+	// based on mouse movement.
 	void update(
-		GLFWwindow* window,
+		GLFWwindow* window
+	);
+
+	// Updates only the camera's position
+	// so it follows the player's newest position.
+	void updatePosition(
 		const glm::vec3& playerPosition
 	);
 
@@ -24,6 +29,7 @@ public:
 	// Gives Player.cpp the current camera directions.
 	const glm::vec3& getFront() const;
 	const glm::vec3& getUp() const;
+
 
 private:
 

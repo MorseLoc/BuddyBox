@@ -34,17 +34,9 @@ Camera::Camera()
 
 
 void Camera::update(
-	GLFWwindow* window,
-	const glm::vec3& playerPosition
+	GLFWwindow* window
 )
 {
-	// Keep the camera attached slightly above the player.
-	position = playerPosition + glm::vec3(
-		0.0f,
-		0.7f,
-		0.0f
-	);
-
 	// Get the mouse's current position.
 	double mouseX;
 	double mouseY;
@@ -122,4 +114,15 @@ const glm::vec3& Camera::getFront() const
 const glm::vec3& Camera::getUp() const
 {
 	return up;
+}
+
+void Camera::updatePosition(
+	const glm::vec3& playerPosition
+)
+{
+	position = playerPosition + glm::vec3(
+		0.0f,
+		0.7f,
+		0.0f
+	);
 }
