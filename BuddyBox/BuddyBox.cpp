@@ -27,6 +27,7 @@
 #include "World.h"
 #include "Renderer.h"
 #include "Camera.h"
+#include "textureManager.h"
 
 //1
 int main()
@@ -86,6 +87,9 @@ int main()
 	// This object will handle drawing everything in the BuddyBox world.
 	Renderer renderer;
 
+	// This object will handle loading and managing textures for the BuddyBox world.
+	TextureManager textureManager;
+
 	// 1.5.1
 	// Enables depth testing.
 	//
@@ -96,175 +100,17 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 
-	// 1.5.2
-	// Load the grass texture image from disk.
-	int grassTextureWidth;
-	int grassTextureHeight;
-	int grassTextureChannels;
-
-	// Stores the OpenGL ID for the grass texture.
-	unsigned int grassTexture = 0;
-
-	// Stores the OpenGL ID for the spawner texture.
-	unsigned int spawnerTexture = 0;
-
-	unsigned char* grassTextureData = stbi_load(
-		"textures/grass.png",
-		&grassTextureWidth,
-		&grassTextureHeight,
-		&grassTextureChannels,
-		STBI_rgb_alpha
-	);
-
-	// Check whether the image loaded successfully.
-	if (grassTextureData == nullptr)
+	// 1.5.2 
+	// Load the block texture atlas (artdex.png) using the TextureManager.
+	if (!textureManager.loadAtlas("textures/artdex.png"))
 	{
-		std::cout << "Failed to load grass texture.\n";
+		std::cout << "Failed to load artdex.png\n";
 	}
-	else
-	{
-		std::cout << "Grass texture loaded successfully.\n";
+	
+	unsigned int blockAtlasTexture =
+		textureManager.getAtlasTexture();
 
-		// Print the texture's width and height to the console.
-		std::cout
-			<< "Texture size: "
-			<< grassTextureWidth
-			<< " x "
-			<< grassTextureHeight
-			<< "\n";
-
-		// 1.5.2.1 
-		// Create an OpenGL texture object.
-		glGenTextures(1, &grassTexture);
-
-		// Make this the texture we are currently working with.
-		glBindTexture(GL_TEXTURE_2D, grassTexture);
-
-		// Use nearest-neighbor filtering so the pixel art stays crisp.
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_MIN_FILTER,
-			GL_NEAREST
-		);
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_MAG_FILTER,
-			GL_NEAREST
-		);
-
-		// Repeat the texture if coordinates ever go outside 0 to 1.
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_WRAP_S,
-			GL_REPEAT
-		);
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_WRAP_T,
-			GL_REPEAT
-		);
-
-		// 1.5.2.2
-		// Upload the PNG pixel data into the OpenGL texture.
-		glTexImage2D(
-			GL_TEXTURE_2D,
-			0,
-			GL_RGBA,
-			grassTextureWidth,
-			grassTextureHeight,
-			0,
-			GL_RGBA,
-			GL_UNSIGNED_BYTE,
-			grassTextureData
-		);
-
-		// Build smaller versions of the texture for distance rendering.
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		// We no longer need the original image data in normal memory.
-		stbi_image_free(grassTextureData);
-	}
-
-	// 1.5.3
-	// Load the Spawner texture image from disk.
-	int spawnerTextureWidth;
-	int spawnerTextureHeight;
-	int spawnerTextureChannels;
-
-	unsigned char* spawnerTextureData = stbi_load(
-		"textures/spawner.png",
-		&spawnerTextureWidth,
-		&spawnerTextureHeight,
-		&spawnerTextureChannels,
-		STBI_rgb_alpha
-	);
-
-	// Check whether the Spawner image loaded successfully.
-	if (spawnerTextureData == nullptr)
-	{
-		std::cout << "Failed to load Spawner texture.\n";
-	}
-	else
-	{
-		std::cout << "Spawner texture loaded successfully.\n";
-
-		// Create the OpenGL texture.
-		glGenTextures(1, &spawnerTexture);
-
-		// Work with the Spawner texture.
-		glBindTexture(
-			GL_TEXTURE_2D,
-			spawnerTexture
-		);
-
-		// Keep pixel art crisp.
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_MIN_FILTER,
-			GL_NEAREST
-		);
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_MAG_FILTER,
-			GL_NEAREST
-		);
-
-		// Allow the texture to repeat.
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_WRAP_S,
-			GL_REPEAT
-		);
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_WRAP_T,
-			GL_REPEAT
-		);
-
-		// Upload the Spawner PNG to the GPU.
-		glTexImage2D(
-			GL_TEXTURE_2D,
-			0,
-			GL_RGBA,
-			spawnerTextureWidth,
-			spawnerTextureHeight,
-			0,
-			GL_RGBA,
-			GL_UNSIGNED_BYTE,
-			spawnerTextureData
-		);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		// Free the original image from normal memory.
-		stbi_image_free(spawnerTextureData);
-	}
-
-	//SECTIONS 1.6 - 1.11 MOVED TO RENDERER.CPP
+		//SECTIONS 1.6 - 1.11 MOVED TO RENDERER.CPP
 
 	// This is the shader program that will be used to draw everything in the world.
 	unsigned int shaderProgram =
@@ -347,14 +193,6 @@ int main()
 		camera.updatePosition(
 			player.position
 		);
-
-		player.move(
-			window,
-			deltaTime,
-			camera.getFront(),
-			camera.getUp(),
-			world
-		);
 	
 		//Removed the following lines since cameraFront and cameraUp are now handled by the Camera class.
 
@@ -425,7 +263,7 @@ int main()
 		// Bind the grass texture to texture unit 0.
 		glBindTexture(
 			GL_TEXTURE_2D,
-			grassTexture
+			blockAtlasTexture
 		);
 
 		// Find the blockTexture variable inside the shader.
@@ -479,6 +317,26 @@ int main()
 		//	1.0f
 		//);
 
+		// Atlas texture row and block count locations in the shader.
+		int textureRowLocation =
+			glGetUniformLocation(
+				shaderProgram,
+				"textureRow"
+			);
+
+		int atlasRowsLocation =
+			glGetUniformLocation(
+				shaderProgram,
+				"atlasRows"
+			);
+
+		glUniform1f(
+			atlasRowsLocation,
+			static_cast<float>(
+				textureManager.getBlockCount()
+				)
+		);
+
 		// Draw all 36 vertices that make up the cube.
 		// Now changed to draw all blocks in the world instead of just one cube.
 
@@ -489,22 +347,14 @@ int main()
 			// Get the actual block stored at this grid position.
 			const Block& block = entry.second;
 
+			// This block's texture row in the atlas is sent to the shader.
+			glUniform1f(
+				textureRowLocation,
+				static_cast<float>(
+					block.textureRow
+					)
+			);
 
-			// Choose the correct texture for this block type.
-			if (block.type == BlockType::Grass)
-			{
-				glBindTexture(
-					GL_TEXTURE_2D,
-					grassTexture
-				);
-			}
-			else if (block.type == BlockType::Spawner)
-			{
-				glBindTexture(
-					GL_TEXTURE_2D,
-					spawnerTexture
-				);
-			}
 			// Get the grid coordinate.
 			int x = std::get<0>(entry.first);
 			int y = std::get<1>(entry.first);

@@ -22,6 +22,8 @@ add_executable(BuddyBox
     "Renderer.h"
     "camera.cpp"
     "camera.h"
+    "textureManager.cpp"
+    "textureManager.h"
 )
 
 configure_file(
@@ -33,14 +35,8 @@ configure_file(
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/textures")
 
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/textures/grass.png"
-    "${CMAKE_CURRENT_BINARY_DIR}/textures/grass.png"
-    COPYONLY
-)
-
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/textures/spawner.png"
-    "${CMAKE_CURRENT_BINARY_DIR}/textures/spawner.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/textures/artdex.png"
+    "${CMAKE_CURRENT_BINARY_DIR}/textures/artdex.png"
     COPYONLY
 )
 

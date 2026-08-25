@@ -2,15 +2,17 @@
 
 #include <glm/glm.hpp>
 
-#include <string>
-
 // Lists all types of blocks that can exist in the game.
 //
 // For now, Grass is the only block type.
 enum class BlockType
 {
 	Grass,
-	Spawner
+	Spawner,
+	Dirt,
+	Wood,
+	Leaf,
+	Stone,
 };
 
 
@@ -31,8 +33,8 @@ struct Block
 	// Whether this block is able to create Jebubs.
 	bool spawnsJebub;
 
-	// File path for this block's texture.
-	std::string texturePath;
+	// Which row of artdex.png this block uses.
+	int textureRow;
 
 	// Creates a block of the given type.
 	Block(BlockType type);

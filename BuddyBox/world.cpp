@@ -117,6 +117,52 @@ bool World::loadFromFile(const std::string& filename)
 				block
 			);
 		}
+
+		else if (blockTypeName == "Dirt")
+		{
+			Block block(BlockType::Dirt);
+
+			placeBlock(
+				x,
+				y,
+				z,
+				block
+			);
+		}
+
+		else if (blockTypeName == "Wood")
+		{
+			Block block(BlockType::Wood);
+
+			placeBlock(
+				x,
+				y,
+				z,
+				block
+			);
+		}
+
+		else if (blockTypeName == "Leaf")
+		{
+			Block block(BlockType::Leaf);
+			placeBlock(
+				x,
+				y,
+				z,
+				block
+			);
+		}
+
+		else if (blockTypeName == "Stone")
+		{
+			Block block(BlockType::Stone);
+			placeBlock(
+				x,
+				y,
+				z,
+				block
+			);
+		}
 	}
 
 	return true;
