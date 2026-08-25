@@ -533,20 +533,20 @@ int main()
 		//1.13.5
 		// Check for things like mouse, keyboard, resizing, and closing.
 		glfwPollEvents();
-	}
 
-	// Move through the hotbar with the mouse wheel.
-	if (scrollAmount > 0.0)
-	{
-		inventory.cycleSlot(-1);
-	}
-	else if (scrollAmount < 0.0)
-	{
-		inventory.cycleSlot(1);
-	}
+		// Move through the hotbar with the mouse wheel.
+		if (scrollAmount > 0.0)
+		{
+			inventory.cycleSlot(-1);
+		}
+		else if (scrollAmount < 0.0)
+		{
+			inventory.cycleSlot(1);
+		}
 
-	// We handled this scroll.
-	scrollAmount = 0.0;
+		// We handled this scroll.
+		scrollAmount = 0.0;
+	}
 
 	// 1.14 
 	// After the loop exits (when the window is closed), the program cleans up by destroying the window and terminating GLFW.
