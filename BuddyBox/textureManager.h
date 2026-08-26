@@ -14,6 +14,11 @@ public:
 		const std::string& texturePath
 	);
 
+	// Loads a normal 2D texture and returns its OpenGL texture ID.
+	unsigned int loadTexture(
+		const std::string& texturePath
+	);
+
 	// Returns the OpenGL texture ID
 	// for the block atlas.
 	unsigned int getAtlasTexture() const;

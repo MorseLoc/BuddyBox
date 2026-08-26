@@ -26,11 +26,19 @@ add_executable(BuddyBox
     "textureManager.h"
     "inventory.cpp"
     "inventory.h"
+    "UIrenderer.cpp"
+    "UIrenderer.h"
 )
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/test.world"
     "${CMAKE_CURRENT_BINARY_DIR}/test.world"
+    COPYONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/inventory.txt"
+    "${CMAKE_CURRENT_BINARY_DIR}/inventory.txt"
     COPYONLY
 )
 

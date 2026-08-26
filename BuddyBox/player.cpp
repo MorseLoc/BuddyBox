@@ -195,7 +195,7 @@ void Player::move(
 	//
 	// Gravity constantly pulls the player's
 	// vertical velocity downward.
-	const float gravity = -20.0f;
+	const float gravity = -23.0f;
 
 	verticalVelocity += gravity * deltaTime;
 

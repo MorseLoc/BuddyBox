@@ -29,6 +29,7 @@
 #include "Camera.h"
 #include "textureManager.h"
 #include "inventory.h"
+#include "UIRenderer.h"
 
 // Stores mouse-wheel movement until the game loop handles it.
 double scrollAmount = 0.0;
@@ -108,6 +109,15 @@ int main()
 	// This object will handle drawing everything in the BuddyBox world.
 	Renderer renderer;
 
+	// This object will handle drawing the 2D user interface (UI) elements, such as the hotbar.
+	UIRenderer uiRenderer;
+
+	if (!uiRenderer.initialize())
+	{
+		std::cout << "Failed to initialize UI renderer.\n";
+		return -1;
+	}
+
 	// This object will handle loading and managing textures for the BuddyBox world.
 	TextureManager textureManager;
 
@@ -131,6 +141,11 @@ int main()
 	unsigned int blockAtlasTexture =
 		textureManager.getAtlasTexture();
 
+	unsigned int scrollWheelTexture =
+		textureManager.loadTexture(
+			"textures/ScrollWheel.png"
+		);
+
 		//SECTIONS 1.6 - 1.11 MOVED TO RENDERER.CPP
 
 	// This is the shader program that will be used to draw everything in the world.
@@ -152,6 +167,12 @@ int main()
 
 	// create an inventory object to represent the player's hotbar and selected block type.
 	Inventory inventory;
+
+	// Load the player's hotbar from inventory.txt.
+	if (!inventory.loadFromFile("inventory.txt"))
+	{
+		std::cout << "Failed to load inventory.txt\n";
+	}
 
 	// THIS IS WHERE YOU GIVE THE WORLD NAME OF THE FILE YOU WANT TO LOAD.
 	if (!world.loadFromFile("test.world"))
@@ -525,6 +546,18 @@ int main()
 				36
 			);
 		}
+
+		// Draw the hotbar at the bottom of the screen.
+		uiRenderer.drawHotbar(
+			scrollWheelTexture,
+			blockAtlasTexture,
+			inventory.getSelectedSlot(),
+			inventory,
+			textureManager.getBlockCount()
+		);
+
+		// Draw the crosshair in the center of the screen.
+		uiRenderer.drawCrosshair();
 
 		//1.13.4
 		// Display the frame we just created.

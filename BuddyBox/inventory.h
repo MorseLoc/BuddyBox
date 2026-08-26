@@ -3,6 +3,7 @@
 #include "Block.h"
 
 #include <vector>
+#include <string>
 
 // Stores the player's hotbar.
 class Inventory
@@ -18,10 +19,20 @@ public:
 	// Returns the currently selected block type.
 	BlockType getSelectedBlockType() const;
 
+	// Returns the block type stored in a specific hotbar slot.
+	BlockType getBlockTypeAtSlot(
+		int slot
+	) const;
+
 	// Returns the selected slot number.
 	// 0 = first slot
 	// 5 = sixth slot
 	int getSelectedSlot() const;
+
+	// Loads the six hotbar slots from a text file.
+	bool loadFromFile(
+		const std::string& filePath
+	);
 
 
 private:
