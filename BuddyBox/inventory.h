@@ -1,45 +1,99 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "Block.h"
 
-#include <vector>
-#include <string>
 
-// Stores the player's hotbar.
+// ============================================================
+// Inventory
+//
+// Represents the player's hotbar.
+//
+// The Inventory stores:
+// - Which BlockType is in each slot
+// - Which slot is currently selected
+//
+// Inventory.cpp handles:
+// - Loading the hotbar from a file
+// - Cycling between slots
+// - Returning selected block information
+// ============================================================
+
 class Inventory
 {
 public:
+    // --------------------------------------------------------
+    // Constructor
+    // --------------------------------------------------------
 
-	// Creates the six starting hotbar slots.
-	Inventory();
+    // Creates the player's starting hotbar.
+    Inventory();
 
-	// Moves the selected slot left or right.
-	void cycleSlot(int direction);
 
-	// Returns the currently selected block type.
-	BlockType getSelectedBlockType() const;
+    // --------------------------------------------------------
+    // Loading
+    // --------------------------------------------------------
 
-	// Returns the block type stored in a specific hotbar slot.
-	BlockType getBlockTypeAtSlot(
-		int slot
-	) const;
+    // Loads hotbar contents from a text file.
+    //
+    // Returns:
+    // true  = file opened successfully
+    // false = file could not be opened
+    bool loadFromFile(
+        const std::string& filePath
+    );
 
-	// Returns the selected slot number.
-	// 0 = first slot
-	// 5 = sixth slot
-	int getSelectedSlot() const;
 
-	// Loads the six hotbar slots from a text file.
-	bool loadFromFile(
-		const std::string& filePath
-	);
+    // --------------------------------------------------------
+    // Slot selection
+    // --------------------------------------------------------
+
+    // Moves the selected slot left or right.
+    //
+    // direction:
+    //  1 = move forward
+    // -1 = move backward
+    void cycleSlot(
+        int direction
+    );
+
+
+    // --------------------------------------------------------
+    // Inventory information
+    // --------------------------------------------------------
+
+    // Returns the BlockType in the currently selected slot.
+    //
+    // Used when the player places a block.
+    BlockType getSelectedBlockType() const;
+
+
+    // Returns the BlockType stored
+    // in a specific hotbar slot.
+    //
+    // Used by the UI when drawing the hotbar.
+    BlockType getBlockTypeAtSlot(
+        int slot
+    ) const;
+
+
+    // Returns the currently selected slot number.
+    //
+    // Slot numbering begins at 0.
+    int getSelectedSlot() const;
 
 
 private:
+    // --------------------------------------------------------
+    // Hotbar data
+    // --------------------------------------------------------
 
-	// The six block types stored in the hotbar.
-	std::vector<BlockType> slots;
+    // Stores the BlockType assigned to each hotbar slot.
+    std::vector<BlockType> slots;
 
-	// Which hotbar slot is currently selected.
-	int selectedSlot;
+
+    // Index of the currently selected slot.
+    int selectedSlot;
 };

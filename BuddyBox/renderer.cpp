@@ -1,264 +1,542 @@
 #include "Renderer.h"
 
 #include <glad/glad.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-// Creates the Renderer.
+// ============================================================
+// Renderer constructor
+//
+// Creates everything needed to draw BuddyBox blocks:
+//
+// - Cube vertex data
+// - Vertex Buffer Object (VBO)
+// - Vertex Array Object (VAO)
+// - Vertex shader
+// - Fragment shader
+// - Final shader program
+// ============================================================
+
 Renderer::Renderer()
 {
-	// 1.6
-	// These vertices create a cube.
-	//
-	// A cube has 6 faces.
-	// Each face needs 2 triangles.
-	// Each triangle needs 3 vertices.
-	//
-	// 6 faces × 2 triangles × 3 vertices = 36 vertices.
+    // ========================================================
+    // 1. Cube vertex data
+    // ========================================================
 
-	float cubeVertices[] =
-	{
-		// FRONT FACE
-		-0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 1.0f,
+    // Each vertex stores 6 values:
+    //
+    // X, Y, Z = position
+    // U, V    = texture coordinates
+    // Face    = which cube face this vertex belongs to
+    //
+    // A cube has:
+    //
+    // 6 faces
+    // × 2 triangles per face
+    // × 3 vertices per triangle
+    //
+    // = 36 total vertices
+    //
+    // Face numbers:
+    //
+    // 0 = top
+    // 1 = front
+    // 2 = back
+    // 3 = left
+    // 4 = right
+    // 5 = bottom
 
-		 0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,
+    float cubeVertices[] =
+    {
+        // ----------------------------------------------------
+        // Front face
+        // ----------------------------------------------------
 
-		// BACK FACE
-		-0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 2.0f,
-		-0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 2.0f,
-		 0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 2.0f,
+        -0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 1.0f,
 
-		 0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 2.0f,
-		 0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 2.0f,
-		-0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 2.0f,
+         0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,
 
-		// LEFT FACE
-		-0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 3.0f,
-		-0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 3.0f,
-		-0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 3.0f,
 
-		-0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 3.0f,
-		-0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 3.0f,
-		-0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 3.0f,
+        // ----------------------------------------------------
+        // Back face
+        // ----------------------------------------------------
 
-		// RIGHT FACE
-		 0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 4.0f,
-		 0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 4.0f,
-		 0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 4.0f,
+        -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 2.0f,
+        -0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 2.0f,
+         0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 2.0f,
 
-		 0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 4.0f,
-		 0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 4.0f,
-		 0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 4.0f,
+         0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 2.0f,
+         0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 2.0f,
+        -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 2.0f,
 
-		 // TOP FACE
-		 -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,
-		 -0.5f,  0.5f,  0.5f,    0.0f, 0.0f, 0.0f,
-		  0.5f,  0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
 
-		  0.5f,  0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
-		  0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
-		 -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,
+        // ----------------------------------------------------
+        // Left face
+        // ----------------------------------------------------
 
-		 // BOTTOM FACE
-		 -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 5.0f,
-		  0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 5.0f,
-		  0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 5.0f,
+        -0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 3.0f,
+        -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 3.0f,
+        -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 3.0f,
 
-		  0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 5.0f,
-		 -0.5f, -0.5f,  0.5f,    0.0f, 1.0f, 5.0f,
-		 -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 5.0f,
-	};
+        -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 3.0f,
+        -0.5f, -0.5f,  0.5f,    1.0f, 0.0f, 3.0f,
+        -0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 3.0f,
 
-	// 1.7
-	// Create a Vertex Buffer Object (VBO).
-	// A VBO is memory on the graphics card used to store our vertex coordinates.
-	glGenBuffers(1, &VBO);
 
-	// 1.7.2
-	// Tell OpenGL that this is the buffer we currently want to work with.
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        // ----------------------------------------------------
+        // Right face
+        // ----------------------------------------------------
 
-	// 1.7.3
-	// Copy our cube vertex data from normal memory into GPU memory.
-	glBufferData(
-		GL_ARRAY_BUFFER,
-		sizeof(cubeVertices),
-		cubeVertices,
-		GL_STATIC_DRAW
-	);
+         0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 4.0f,
+         0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 4.0f,
+         0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 4.0f,
 
-	// 1.8
-	// Create a Vertex Array Object (VAO).
-	// The VAO remembers how our vertex data is organized.
-	glGenVertexArrays(1, &VAO);
+         0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 4.0f,
+         0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 4.0f,
+         0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 4.0f,
 
-	// 1.8.2
-	// Tell OpenGL that this VAO is the one we are currently setting up.
-	glBindVertexArray(VAO);
 
-	// 1.8.3
-	// Re-bind our VBO so the VAO knows which vertex buffer we are using.
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+         // ----------------------------------------------------
+         // Top face
+         // ----------------------------------------------------
 
-	// 1.8.4
-	// Tell OpenGL where the XYZ position is stored.
-	glVertexAttribPointer(
-		0,
-		3,
-		GL_FLOAT,
-		GL_FALSE,
-		6 * sizeof(float),
-		(void*)0
-	);
+         -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,
+         -0.5f,  0.5f,  0.5f,    0.0f, 0.0f, 0.0f,
+          0.5f,  0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
 
-	glEnableVertexAttribArray(0);
+          0.5f,  0.5f,  0.5f,    1.0f, 0.0f, 0.0f,
+          0.5f,  0.5f, -0.5f,    1.0f, 1.0f, 0.0f,
+         -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,
 
-	// 1.8.6
-	// Tell OpenGL where the texture coordinates are stored.
-	glVertexAttribPointer(
-		1,
-		2,
-		GL_FLOAT,
-		GL_FALSE,
-		6 * sizeof(float),
-		(void*)(3 * sizeof(float))
-	);
 
-	glEnableVertexAttribArray(1);
+         // ----------------------------------------------------
+         // Bottom face
+         // ----------------------------------------------------
 
-	// Face index.
-	// 0 = top
-	// 1 = front
-	// 2 = back
-	// 3 = left
-	// 4 = right
-	// 5 = bottom
-	glVertexAttribPointer(
-		2,
-		1,
-		GL_FLOAT,
-		GL_FALSE,
-		6 * sizeof(float),
-		(void*)(5 * sizeof(float))
-	);
+         -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 5.0f,
+          0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 5.0f,
+          0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 5.0f,
 
-	glEnableVertexAttribArray(2);
+          0.5f, -0.5f,  0.5f,    1.0f, 1.0f, 5.0f,
+         -0.5f, -0.5f,  0.5f,    0.0f, 1.0f, 5.0f,
+         -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 5.0f
+    };
 
-	// 1.9
-	// Vertex shader:
-	// Takes each vertex's position in the 3D world and converts it
-	// into the correct position on our 2D screen.
-	//
-	// It also receives the texture coordinates and face index.
-	const char* vertexShaderSource =
-		"#version 330 core\n"
 
-		"layout (location = 0) in vec3 position;\n"
-		"layout (location = 1) in vec2 textureCoordinate;\n"
-		"layout (location = 2) in float faceIndex;\n"
+    // ========================================================
+    // 2. Create the Vertex Buffer Object
+    // ========================================================
 
-		"out vec2 texCoord;\n"
+    // The VBO stores the cube's raw vertex data
+    // inside graphics-card memory.
+    glGenBuffers(
+        1,
+        &VBO
+    );
 
-		"uniform mat4 model;\n"
-		"uniform mat4 view;\n"
-		"uniform mat4 projection;\n"
 
-		"uniform float textureRow;\n"
-		"uniform float atlasRows;\n"
+    glBindBuffer(
+        GL_ARRAY_BUFFER,
+        VBO
+    );
 
-		"void main()\n"
-		"{\n"
 
-		"    gl_Position = projection * view * model * vec4(position, 1.0);\n"
+    // Copy cubeVertices from normal RAM into GPU memory.
+    //
+    // GL_STATIC_DRAW means this data is not expected
+    // to change frequently.
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        sizeof(cubeVertices),
+        cubeVertices,
+        GL_STATIC_DRAW
+    );
 
-		"    float atlasU = (faceIndex + textureCoordinate.x) / 6.0;\n"
-		"    float atlasV = (textureRow + (1.0 - textureCoordinate.y)) / atlasRows;\n"
 
-		"    texCoord = vec2(atlasU, atlasV);\n"
+    // ========================================================
+    // 3. Create the Vertex Array Object
+    // ========================================================
 
-		"}\n";
+    // The VAO remembers how each vertex is organized.
+    glGenVertexArrays(
+        1,
+        &VAO
+    );
 
-	// 1.9.1
-	// Create a vertex shader on the GPU.
-	unsigned int vertexShader;
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 
-	glShaderSource(
-		vertexShader,
-		1,
-		&vertexShaderSource,
-		nullptr
-	);
+    glBindVertexArray(
+        VAO
+    );
 
-	glCompileShader(vertexShader);
 
-	// 1.10
-	// Fragment shader:
-	// Controls the color of every pixel drawn on the block.
-	const char* fragmentShaderSource =
-		"#version 330 core\n"
+    // Attach our cube VBO to this VAO.
+    glBindBuffer(
+        GL_ARRAY_BUFFER,
+        VBO
+    );
 
-		"in vec2 texCoord;\n"
 
-		"out vec4 finalColor;\n"
+    // --------------------------------------------------------
+    // Vertex attribute 0: position
+    // --------------------------------------------------------
 
-		"uniform sampler2D blockTexture;\n"
+    // Reads:
+    //
+    // X, Y, Z
+    //
+    // from each group of 6 floats.
+    glVertexAttribPointer(
+        0,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        6 * sizeof(float),
+        (void*)0
+    );
 
-		"void main()\n"
-		"{\n"
 
-		"    finalColor = texture(blockTexture, texCoord);\n"
+    glEnableVertexAttribArray(
+        0
+    );
 
-		"}\n";
 
-	// 1.10.1
-	// Create a fragment shader on the GPU.
-	unsigned int fragmentShader;
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    // --------------------------------------------------------
+    // Vertex attribute 1: texture coordinates
+    // --------------------------------------------------------
 
-	glShaderSource(
-		fragmentShader,
-		1,
-		&fragmentShaderSource,
-		nullptr
-	);
+    // Reads:
+    //
+    // U, V
+    //
+    // starting after the first 3 position floats.
+    glVertexAttribPointer(
+        1,
+        2,
+        GL_FLOAT,
+        GL_FALSE,
+        6 * sizeof(float),
+        (void*)(3 * sizeof(float))
+    );
 
-	glCompileShader(fragmentShader);
 
-	// 1.11
-	// Create a shader program.
-	shaderProgram = glCreateProgram();
+    glEnableVertexAttribArray(
+        1
+    );
 
-	// 1.11.1
-	// Attach both shaders.
-	glAttachShader(
-		shaderProgram,
-		vertexShader
-	);
 
-	glAttachShader(
-		shaderProgram,
-		fragmentShader
-	);
+    // --------------------------------------------------------
+    // Vertex attribute 2: cube face
+    // --------------------------------------------------------
 
-	// 1.11.2
-	// Link them together.
-	glLinkProgram(shaderProgram);
+    // Reads the final float in each vertex.
+    //
+    // The shader uses this value to choose which horizontal
+    // section of the texture atlas belongs to this cube face.
+    glVertexAttribPointer(
+        2,
+        1,
+        GL_FLOAT,
+        GL_FALSE,
+        6 * sizeof(float),
+        (void*)(5 * sizeof(float))
+    );
 
-	// 1.11.3
-	// The separate shaders are no longer needed after linking.
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
+
+    glEnableVertexAttribArray(
+        2
+    );
+
+
+    // ========================================================
+    // 4. Vertex shader
+    // ========================================================
+
+    // The vertex shader runs once for every vertex.
+    //
+    // It:
+    // - Transforms the vertex into camera/screen space
+    // - Calculates the correct texture-atlas coordinates
+
+    const char* vertexShaderSource =
+        "#version 330 core\n"
+
+        "layout (location = 0) in vec3 position;\n"
+        "layout (location = 1) in vec2 textureCoordinate;\n"
+        "layout (location = 2) in float faceIndex;\n"
+
+        "out vec2 texCoord;\n"
+
+        "uniform mat4 model;\n"
+        "uniform mat4 view;\n"
+        "uniform mat4 projection;\n"
+
+        "uniform float textureRow;\n"
+        "uniform float atlasRows;\n"
+
+        "void main()\n"
+        "{\n"
+
+        // Convert the cube vertex from model space
+        // into its final position on screen.
+        "    gl_Position = projection * view * model * vec4(position, 1.0);\n"
+
+        // The atlas contains the six cube faces horizontally.
+        //
+        // faceIndex chooses which face section to use.
+        "    float atlasU = (faceIndex + textureCoordinate.x) / 6.0;\n"
+
+        // textureRow chooses which block type to use vertically.
+        "    float atlasV = (textureRow + (1.0 - textureCoordinate.y)) / atlasRows;\n"
+
+        "    texCoord = vec2(atlasU, atlasV);\n"
+
+        "}\n";
+
+
+    // Create the vertex shader object on the GPU.
+    unsigned int vertexShader =
+        glCreateShader(
+            GL_VERTEX_SHADER
+        );
+
+
+    // Give OpenGL our shader source code.
+    glShaderSource(
+        vertexShader,
+        1,
+        &vertexShaderSource,
+        nullptr
+    );
+
+
+    // Compile the shader.
+    glCompileShader(
+        vertexShader
+    );
+
+
+    // ========================================================
+    // 5. Fragment shader
+    // ========================================================
+
+    // The fragment shader runs for each pixel produced
+    // while drawing the cube.
+    //
+    // It reads the block texture and chooses the
+    // final pixel color.
+
+    const char* fragmentShaderSource =
+        "#version 330 core\n"
+
+        "in vec2 texCoord;\n"
+
+        "out vec4 finalColor;\n"
+
+        "uniform sampler2D blockTexture;\n"
+
+        "uniform bool useSolidColor;\n"
+        "uniform vec3 solidColor;\n"
+
+        "void main()\n"
+        "{\n"
+
+        "    if (useSolidColor)\n"
+        "    {\n"
+        "        finalColor = vec4(solidColor, 1.0);\n"
+        "    }\n"
+        "    else\n"
+        "    {\n"
+        "        finalColor = texture(blockTexture, texCoord);\n"
+        "    }\n"
+
+        "}\n";
+
+    // Create the fragment shader object.
+    unsigned int fragmentShader =
+        glCreateShader(
+            GL_FRAGMENT_SHADER
+        );
+
+
+    glShaderSource(
+        fragmentShader,
+        1,
+        &fragmentShaderSource,
+        nullptr
+    );
+
+
+    glCompileShader(
+        fragmentShader
+    );
+
+
+    // ========================================================
+    // 6. Create the shader program
+    // ========================================================
+
+    // A shader program combines the vertex shader
+    // and fragment shader into one rendering pipeline.
+    shaderProgram =
+        glCreateProgram();
+
+
+    glAttachShader(
+        shaderProgram,
+        vertexShader
+    );
+
+
+    glAttachShader(
+        shaderProgram,
+        fragmentShader
+    );
+
+
+    // Combine the shaders into the finished program.
+    glLinkProgram(
+        shaderProgram
+    );
+
+
+    // Once the program has been linked successfully,
+    // the individual shader objects are no longer needed.
+    glDeleteShader(
+        vertexShader
+    );
+
+
+    glDeleteShader(
+        fragmentShader
+    );
 }
+
+
+// ============================================================
+// Bind cube
+//
+// Activates the cube VAO so OpenGL knows which vertex data
+// should be used by the next drawing command.
+// ============================================================
 
 void Renderer::bindCube()
 {
-	glBindVertexArray(VAO);
+    glBindVertexArray(
+        VAO
+    );
 }
+
+
+// ============================================================
+// Get shader program
+//
+// Gives other parts of the game access to the block shader.
+// ============================================================
 
 unsigned int Renderer::getShaderProgram() const
 {
-	return shaderProgram;
+    return shaderProgram;
+}
+
+void Renderer::drawColoredCube(
+    const glm::vec3& position,
+    const glm::vec3& size,
+    const glm::vec3& color
+)
+{
+    glUseProgram(
+        shaderProgram
+    );
+
+
+    // Tell the shader to ignore textures
+    // and use a plain color instead.
+    int useSolidColorLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useSolidColor"
+        );
+
+    glUniform1i(
+        useSolidColorLocation,
+        1
+    );
+
+
+    // Send the requested RGB color.
+    int solidColorLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "solidColor"
+        );
+
+    glUniform3f(
+        solidColorLocation,
+        color.r,
+        color.g,
+        color.b
+    );
+
+
+    // Start with a normal model matrix.
+    glm::mat4 model =
+        glm::mat4(1.0f);
+
+
+    // Move the cube into position.
+    model =
+        glm::translate(
+            model,
+            position
+        );
+
+
+    // Stretch the normal 1 x 1 x 1 cube
+    // into the requested size.
+    model =
+        glm::scale(
+            model,
+            size
+        );
+
+
+    int modelLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "model"
+        );
+
+
+    glUniformMatrix4fv(
+        modelLocation,
+        1,
+        GL_FALSE,
+        glm::value_ptr(model)
+    );
+
+
+    // Use the cube geometry already owned by Renderer.
+    glBindVertexArray(
+        VAO
+    );
+
+
+    glDrawArrays(
+        GL_TRIANGLES,
+        0,
+        36
+    );
+
+
+    // IMPORTANT:
+    // Turn solid-color mode back off so normal
+    // world blocks keep using their textures.
+    glUniform1i(
+        useSolidColorLocation,
+        0
+    );
 }

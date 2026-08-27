@@ -3,131 +3,244 @@
 #include <GLFW/glfw3.h>
 #include <cmath>
 
+
+// ============================================================
+// Camera constructor
+//
+// Sets the camera's starting position, direction,
+// rotation, and mouse sensitivity.
+// ============================================================
+
 Camera::Camera()
 {
-	position = glm::vec3(
-		0.0f,
-		0.0f,
-		0.0f
-	);
+    // Camera starts at the origin.
+    //
+    // Its real gameplay position will later be updated
+    // to follow the player.
+    position = glm::vec3(
+        0.0f,
+        0.0f,
+        0.0f
+    );
 
-	front = glm::vec3(
-		0.0f,
-		0.0f,
-		-1.0f
-	);
 
-	up = glm::vec3(
-		0.0f,
-		1.0f,
-		0.0f
-	);
+    // Starting direction.
+    //
+    // Negative Z means the camera initially looks forward
+    // into the BuddyBox world.
+    front = glm::vec3(
+        0.0f,
+        0.0f,
+        -1.0f
+    );
 
-	yaw = -90.0f;
-	pitch = 0.0f;
 
-	lastMouseX = 400.0;
-	lastMouseY = 300.0;
+    // Defines which direction counts as "up."
+    up = glm::vec3(
+        0.0f,
+        1.0f,
+        0.0f
+    );
 
-	mouseSensitivity = 0.2f;
+
+    // Horizontal camera rotation.
+    yaw = -90.0f;
+
+
+    // Vertical camera rotation.
+    pitch = 0.0f;
+
+
+    // Starting mouse position.
+    //
+    // These values match the center of the original
+    // 800 x 600 BuddyBox window.
+    lastMouseX = 400.0;
+    lastMouseY = 300.0;
+
+
+    // Controls how strongly mouse movement rotates the camera.
+    mouseSensitivity = 0.2f;
 }
 
+
+// ============================================================
+// Update camera rotation
+//
+// Reads mouse movement and converts it into
+// camera yaw and pitch.
+// ============================================================
 
 void Camera::update(
-	GLFWwindow* window
+    GLFWwindow* window
 )
 {
-	// Get the mouse's current position.
-	double mouseX;
-	double mouseY;
+    // --------------------------------------------------------
+    // Read mouse position
+    // --------------------------------------------------------
 
-	glfwGetCursorPos(
-		window,
-		&mouseX,
-		&mouseY
-	);
+    double mouseX;
+    double mouseY;
 
-	// Measure how far the mouse moved since the previous frame.
-	float mouseOffsetX =
-		static_cast<float>(mouseX - lastMouseX);
 
-	float mouseOffsetY =
-		static_cast<float>(lastMouseY - mouseY);
+    glfwGetCursorPos(
+        window,
+        &mouseX,
+        &mouseY
+    );
 
-	// Save the current mouse position for next frame.
-	lastMouseX = mouseX;
-	lastMouseY = mouseY;
 
-	// Apply mouse sensitivity.
-	mouseOffsetX *= mouseSensitivity;
-	mouseOffsetY *= mouseSensitivity;
+    // --------------------------------------------------------
+    // Calculate mouse movement
+    // --------------------------------------------------------
 
-	// Update camera rotation.
-	yaw += mouseOffsetX;
-	pitch += mouseOffsetY;
+    // Horizontal mouse movement.
+    float mouseOffsetX =
+        static_cast<float>(
+            mouseX - lastMouseX
+            );
 
-	// Prevent the camera from flipping upside down.
-	if (pitch > 89.0f)
-	{
-		pitch = 89.0f;
-	}
 
-	if (pitch < -89.0f)
-	{
-		pitch = -89.0f;
-	}
+    // Vertical movement is reversed because window coordinates
+    // increase downward, while looking upward should increase pitch.
+    float mouseOffsetY =
+        static_cast<float>(
+            lastMouseY - mouseY
+            );
 
-	// Convert yaw and pitch into a direction.
-	glm::vec3 direction;
 
-	direction.x =
-		cos(glm::radians(yaw)) *
-		cos(glm::radians(pitch));
+    // Save this mouse position for the next frame.
+    lastMouseX =
+        mouseX;
 
-	direction.y =
-		sin(glm::radians(pitch));
+    lastMouseY =
+        mouseY;
 
-	direction.z =
-		sin(glm::radians(yaw)) *
-		cos(glm::radians(pitch));
 
-	front = glm::normalize(direction);
+    // Apply sensitivity.
+    mouseOffsetX *=
+        mouseSensitivity;
+
+    mouseOffsetY *=
+        mouseSensitivity;
+
+
+    // --------------------------------------------------------
+    // Update camera rotation
+    // --------------------------------------------------------
+
+    // Yaw controls left/right rotation.
+    yaw +=
+        mouseOffsetX;
+
+
+    // Pitch controls up/down rotation.
+    pitch +=
+        mouseOffsetY;
+
+
+    // Keep pitch slightly below 90 degrees.
+    //
+    // This prevents the camera from flipping upside down.
+    if (pitch > 89.0f)
+    {
+        pitch = 89.0f;
+    }
+
+
+    if (pitch < -89.0f)
+    {
+        pitch = -89.0f;
+    }
+
+
+    // --------------------------------------------------------
+    // Convert rotation into a direction vector
+    // --------------------------------------------------------
+
+    // Yaw and pitch are angles.
+    //
+    // These formulas convert those angles into an XYZ
+    // direction that OpenGL can use.
+    glm::vec3 direction;
+
+
+    direction.x =
+        std::cos(glm::radians(yaw)) *
+        std::cos(glm::radians(pitch));
+
+
+    direction.y =
+        std::sin(glm::radians(pitch));
+
+
+    direction.z =
+        std::sin(glm::radians(yaw)) *
+        std::cos(glm::radians(pitch));
+
+
+    // Normalize so front always has a length of 1.
+    front =
+        glm::normalize(direction);
 }
 
+
+// ============================================================
+// View matrix
+//
+// Creates the matrix that represents where the camera is
+// and which direction it is looking.
+// ============================================================
 
 glm::mat4 Camera::getViewMatrix() const
 {
-	return glm::lookAt(
-		position,
-		position + front,
-		up
-	);
+    return glm::lookAt(
+        position,
+        position + front,
+        up
+    );
 }
 
 
+// ============================================================
+// Camera direction getters
+// ============================================================
+
 const glm::vec3& Camera::getFront() const
 {
-	return front;
+    return front;
 }
 
 
 const glm::vec3& Camera::getUp() const
 {
-	return up;
+    return up;
 }
+
 
 const glm::vec3& Camera::getPosition() const
 {
-	return position;
+    return position;
 }
 
+
+// ============================================================
+// Follow player
+//
+// Moves the camera to the player's position,
+// with a small vertical offset so the view comes
+// from around the player's eye level.
+// ============================================================
+
 void Camera::updatePosition(
-	const glm::vec3& playerPosition
+    const glm::vec3& playerPosition
 )
 {
-	position = playerPosition + glm::vec3(
-		0.0f,
-		0.7f,
-		0.0f
-	);
+    position =
+        playerPosition +
+        glm::vec3(
+            0.0f,
+            0.7f,
+            0.0f
+        );
 }

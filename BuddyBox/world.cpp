@@ -1,239 +1,351 @@
 #include "World.h"
 
+#include <cmath>
 #include <fstream>
 #include <string>
 
-#include <cmath>
 
-// Checks whether the world already contains a block
-// at the given X, Y, Z grid position.
+// ============================================================
+// Block lookup
+// ============================================================
+
+// Returns true if any block exists at this grid position.
 bool World::hasBlock(
-	int x,
-	int y,
-	int z
+    int x,
+    int y,
+    int z
 ) const
 {
-	// Create one grid coordinate from X, Y, and Z.
-	auto position = std::make_tuple(
-		x,
-		y,
-		z
-	);
+    auto position =
+        std::make_tuple(
+            x,
+            y,
+            z
+        );
 
-	// Search the block map for that position.
-	return blocks.find(position) != blocks.end();
+
+    return blocks.find(position) !=
+        blocks.end();
 }
 
-// Checks whether a solid block exists
-// at the given X, Y, Z grid position.
+
+// Returns true only if a solid block exists
+// at this grid position.
 bool World::isSolidAt(
-	int x,
-	int y,
-	int z
+    int x,
+    int y,
+    int z
 ) const
 {
-	// Create the grid coordinate we want to check.
-	auto position = std::make_tuple(
-		x,
-		y,
-		z
-	);
+    auto position =
+        std::make_tuple(
+            x,
+            y,
+            z
+        );
 
-	// Try to find a block at this position.
-	auto block = blocks.find(position);
 
-	// If no block exists here, the space is not solid.
-	if (block == blocks.end())
-	{
-		return false;
-	}
+    auto block =
+        blocks.find(position);
 
-	// If a block does exist, return its solid property.
-	return block->second.solid;
+
+    // Empty space is not solid.
+    if (block == blocks.end())
+    {
+        return false;
+    }
+
+
+    return block->second.solid;
 }
 
-// Places a block at the given grid position.
-void World::placeBlock(
-	int x,
-	int y,
-	int z,
-	const Block& block
-)
-{
-	// Create one grid coordinate from X, Y, and Z.
-	auto position = std::make_tuple(
-		x,
-		y,
-		z
-	);
 
-	// Insert the block into the map at that position.
-	blocks.insert_or_assign(position, block);
-}
+// ============================================================
+// Block editing
+// ============================================================
 
-// Removes a block from the given grid position.
-void World::removeBlock(
-	int x,
-	int y,
-	int z
-)
-{
-	auto position = std::make_tuple(
-		x,
-		y,
-		z
-	);
-
-	blocks.erase(position);
-}
-
-// Finds the first block hit by a ray.
-bool World::raycastBlock(
-	const glm::vec3& origin,
-	const glm::vec3& direction,
-	float maxDistance,
-	int& hitX,
-	int& hitY,
-	int& hitZ,
-	int& previousX,
-	int& previousY,
-	int& previousZ
-) const
-{
-	const float stepSize = 0.05f;
-
-	glm::vec3 rayPosition = origin;
-
-	int lastX = static_cast<int>(floor(rayPosition.x + 0.5f));
-	int lastY = static_cast<int>(floor(rayPosition.y + 0.5f));
-	int lastZ = static_cast<int>(floor(rayPosition.z + 0.5f));
-
-	for (float distance = 0.0f;
-		distance <= maxDistance;
-		distance += stepSize)
-	{
-		rayPosition = origin + direction * distance;
-
-		int x = static_cast<int>(floor(rayPosition.x + 0.5f));
-		int y = static_cast<int>(floor(rayPosition.y + 0.5f));
-		int z = static_cast<int>(floor(rayPosition.z + 0.5f));
-
-		if (hasBlock(x, y, z))
-		{
-			hitX = x;
-			hitY = y;
-			hitZ = z;
-
-			previousX = lastX;
-			previousY = lastY;
-			previousZ = lastZ;
-
-			return true;
-		}
-
-		lastX = x;
-		lastY = y;
-		lastZ = z;
-	}
-
-	return false;
-}
-
-// Loads blocks from a world file.
+// Places a block at a grid position.
 //
-// Expected format for each line:
+// If a block already exists there,
+// insert_or_assign replaces it.
+void World::placeBlock(
+    int x,
+    int y,
+    int z,
+    const Block& block
+)
+{
+    auto position =
+        std::make_tuple(
+            x,
+            y,
+            z
+        );
+
+
+    blocks.insert_or_assign(
+        position,
+        block
+    );
+}
+
+
+// Removes the block at a grid position.
+//
+// If no block exists there,
+// erase() simply does nothing.
+void World::removeBlock(
+    int x,
+    int y,
+    int z
+)
+{
+    auto position =
+        std::make_tuple(
+            x,
+            y,
+            z
+        );
+
+
+    blocks.erase(
+        position
+    );
+}
+
+
+// ============================================================
+// Block raycasting
+//
+// Shoots an invisible ray through the world and finds
+// the first block it touches.
+//
+// Used for breaking and placing blocks.
+//
+// hitX/Y/Z:
+//     The block that was hit.
+//
+// previousX/Y/Z:
+//     The empty grid position immediately before the hit block.
+//     This is where a newly placed block can go.
+// ============================================================
+
+bool World::raycastBlock(
+    const glm::vec3& origin,
+    const glm::vec3& direction,
+    float maxDistance,
+    int& hitX,
+    int& hitY,
+    int& hitZ,
+    int& previousX,
+    int& previousY,
+    int& previousZ
+) const
+{
+    // Distance between each ray test.
+    //
+    // Smaller values are more precise,
+    // but require more checks.
+    const float stepSize =
+        0.05f;
+
+
+    // Start the ray at the camera position.
+    glm::vec3 rayPosition =
+        origin;
+
+
+    // Remember the grid cell the ray was previously inside.
+    int lastX =
+        static_cast<int>(
+            std::floor(rayPosition.x + 0.5f)
+            );
+
+    int lastY =
+        static_cast<int>(
+            std::floor(rayPosition.y + 0.5f)
+            );
+
+    int lastZ =
+        static_cast<int>(
+            std::floor(rayPosition.z + 0.5f)
+            );
+
+
+    // Move along the ray until it reaches maxDistance.
+    for (
+        float distance = 0.0f;
+        distance <= maxDistance;
+        distance += stepSize
+        )
+    {
+        // Calculate the ray's position at this distance.
+        rayPosition =
+            origin +
+            direction * distance;
+
+
+        // Convert that position into a block-grid coordinate.
+        int x =
+            static_cast<int>(
+                std::floor(rayPosition.x + 0.5f)
+                );
+
+        int y =
+            static_cast<int>(
+                std::floor(rayPosition.y + 0.5f)
+                );
+
+        int z =
+            static_cast<int>(
+                std::floor(rayPosition.z + 0.5f)
+                );
+
+
+        // The first block encountered is the block we hit.
+        if (hasBlock(x, y, z))
+        {
+            hitX = x;
+            hitY = y;
+            hitZ = z;
+
+
+            // Save the previous grid cell too.
+            //
+            // This lets block placement put a new block
+            // directly beside the block that was hit.
+            previousX = lastX;
+            previousY = lastY;
+            previousZ = lastZ;
+
+
+            return true;
+        }
+
+
+        // Remember this grid cell for the next ray step.
+        lastX = x;
+        lastY = y;
+        lastZ = z;
+    }
+
+
+    // The ray reached maxDistance without hitting anything.
+    return false;
+}
+
+
+// ============================================================
+// World loading
+//
+// Loads blocks from a text file.
+//
+// Each line uses:
+//
 // X Y Z BlockType
 //
 // Example:
+//
 // 0 0 0 Grass
-bool World::loadFromFile(const std::string& filename)
+// 1 0 0 Stone
+// ============================================================
+
+bool World::loadFromFile(
+    const std::string& filename
+)
 {
-	std::ifstream file(filename);
+    std::ifstream file(
+        filename
+    );
 
-	// If the file could not be opened, loading failed.
-	if (!file.is_open())
-	{
-		return false;
-	}
 
-	int x;
-	int y;
-	int z;
-	std::string blockTypeName;
+    // Loading fails if the file cannot be opened.
+    if (!file.is_open())
+    {
+        return false;
+    }
 
-	// Read one block at a time until the file ends.
-	while (file >> x >> y >> z >> blockTypeName)
-	{
-		if (blockTypeName == "Grass")
-		{
-			Block block(BlockType::Grass);
 
-			placeBlock(
-				x,
-				y,
-				z,
-				block
-			);
-		}
+    int x;
+    int y;
+    int z;
 
-		else if (blockTypeName == "Spawner")
-		{
-			Block block(BlockType::Spawner);
+    std::string blockTypeName;
 
-			placeBlock(
-				x,
-				y,
-				z,
-				block
-			);
-		}
 
-		else if (blockTypeName == "Dirt")
-		{
-			Block block(BlockType::Dirt);
+    // Read one block definition at a time.
+    while (
+        file >>
+        x >>
+        y >>
+        z >>
+        blockTypeName
+        )
+    {
+        // ----------------------------------------------------
+        // Convert the text name into a BlockType
+        // ----------------------------------------------------
 
-			placeBlock(
-				x,
-				y,
-				z,
-				block
-			);
-		}
+        BlockType blockType;
 
-		else if (blockTypeName == "Wood")
-		{
-			Block block(BlockType::Wood);
 
-			placeBlock(
-				x,
-				y,
-				z,
-				block
-			);
-		}
+        if (blockTypeName == "Grass")
+        {
+            blockType =
+                BlockType::Grass;
+        }
+        else if (blockTypeName == "Spawner")
+        {
+            blockType =
+                BlockType::Spawner;
+        }
+        else if (blockTypeName == "Dirt")
+        {
+            blockType =
+                BlockType::Dirt;
+        }
+        else if (blockTypeName == "Wood")
+        {
+            blockType =
+                BlockType::Wood;
+        }
+        else if (blockTypeName == "Leaf")
+        {
+            blockType =
+                BlockType::Leaf;
+        }
+        else if (blockTypeName == "Stone")
+        {
+            blockType =
+                BlockType::Stone;
+        }
+        else
+        {
+            // Unknown block type.
+            //
+            // Ignore this line instead of creating
+            // a block with invalid properties.
+            continue;
+        }
 
-		else if (blockTypeName == "Leaf")
-		{
-			Block block(BlockType::Leaf);
-			placeBlock(
-				x,
-				y,
-				z,
-				block
-			);
-		}
 
-		else if (blockTypeName == "Stone")
-		{
-			Block block(BlockType::Stone);
-			placeBlock(
-				x,
-				y,
-				z,
-				block
-			);
-		}
-	}
+        // ----------------------------------------------------
+        // Create and place the block
+        // ----------------------------------------------------
 
-	return true;
+        Block block(
+            blockType
+        );
+
+
+        placeBlock(
+            x,
+            y,
+            z,
+            block
+        );
+    }
+
+
+    return true;
 }

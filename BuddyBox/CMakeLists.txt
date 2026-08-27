@@ -28,6 +28,8 @@ add_executable(BuddyBox
     "inventory.h"
     "UIrenderer.cpp"
     "UIrenderer.h"
+    "NPC.cpp"
+    "NPC.h"
 )
 
 configure_file(

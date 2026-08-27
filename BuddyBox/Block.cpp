@@ -1,130 +1,84 @@
 #include "Block.h"
 
-// Creates a block and gives it the
-// correct properties for its block type.
+
+// ============================================================
+// Block constructor
+//
+// Creates a block and gives it the correct properties
+// based on its BlockType.
+//
+// Most blocks currently share the same basic properties:
+// - 1 x 1 x 1 size
+// - solid
+// - does not spawn Jebubs
+//
+// After setting those defaults, we only change the
+// properties that are unique to each block type.
+// ============================================================
+
 Block::Block(BlockType blockType)
 {
-	// Store what kind of block this is.
-	type = blockType;
+    // Store what kind of block this is.
+    type = blockType;
 
 
-	// GRASS BLOCK
-	if (type == BlockType::Grass)
-	{
-		// Grass blocks are normal 1 x 1 x 1 blocks.
-		size = glm::vec3(
-			1.0f,
-			1.0f,
-			1.0f
-		);
+    // --------------------------------------------------------
+    // Default block properties
+    // --------------------------------------------------------
 
-		// The player cannot walk through grass blocks.
-		solid = true;
+    // All current blocks are normal 1 x 1 x 1 cubes.
+    size = glm::vec3(
+        1.0f,
+        1.0f,
+        1.0f
+    );
 
-		// Grass blocks do not spawn Jebubs.
-		spawnsJebub = false;
 
-		// Grass uses row 0 of artdex.png.
-		textureRow = 0;
-	}
+    // All current blocks have collision.
+    // This means the player cannot walk through them.
+    solid = true;
 
-	// SPAWNER BLOCK
-	if (type == BlockType::Spawner)
-	{
-		// Spawners are normal 1 x 1 x 1 blocks.
-		size = glm::vec3(
-			1.0f,
-			1.0f,
-			1.0f
-		);
 
-		// The player cannot walk through a Spawner.
-		solid = true;
+    // Most blocks do not spawn Jebubs.
+    spawnsJebub = false;
 
-		// This block is allowed to create Jebubs.
-		spawnsJebub = true;
 
-		// Spawner uses row 1 of artdex.png.
-		textureRow = 1;
-	}
+    // --------------------------------------------------------
+    // Block-specific properties
+    // --------------------------------------------------------
 
-	// DIRT BLOCK
-	if (type == BlockType::Dirt)
-	{
-		// DIRT blocks are normal 1 x 1 x 1 blocks.
-		size = glm::vec3(
-			1.0f,
-			1.0f,
-			1.0f
-		);
+    if (type == BlockType::Grass)
+    {
+        // Grass uses row 0 of the texture atlas.
+        textureRow = 0;
+    }
+    else if (type == BlockType::Spawner)
+    {
+        // Spawner uses row 1 of the texture atlas.
+        textureRow = 1;
 
-		// The player cannot walk through dirt blocks.
-		solid = true;
-
-		// DIRT blocks do not spawn Jebubs.
-		spawnsJebub = false;
-
-		// DIRT uses row 2 of artdex.png.
-		textureRow = 2;
-	}
-
-	// Wood BLOCK
-	if (type == BlockType::Wood)
-	{
-		// Wood blocks are normal 1 x 1 x 1 blocks.
-		size = glm::vec3(
-			1.0f,
-			1.0f,
-			1.0f
-		);
-
-		// The player cannot walk through wood blocks.
-		solid = true;
-
-		// Wood blocks do not spawn Jebubs.
-		spawnsJebub = false;
-
-		// Wood uses row 3 of artdex.png.
-		textureRow = 3;
-	}
-
-	// Leaf BLOCK
-	if (type == BlockType::Leaf)
-	{
-		// Leaf blocks are normal 1 x 1 x 1 blocks.
-		size = glm::vec3(
-			1.0f,
-			1.0f,
-			1.0f
-		);
-
-		// The player cannot walk through leaf blocks.
-		solid = true;
-
-		// Leaf blocks do not spawn Jebubs.
-		spawnsJebub = false;
-
-		// Leaf uses row 4 of artdex.png.
-		textureRow = 4;
-	}
-
-	// Stone BLOCK
-	if (type == BlockType::Stone)
-	{
-		// Stone blocks are normal 1 x 1 x 1 blocks.
-		size = glm::vec3(
-			1.0f,
-			1.0f,
-			1.0f
-		);
-
-		// The player cannot walk through stone blocks.
-		solid = true;
-
-		// Stone blocks do not spawn Jebubs.
-		spawnsJebub = false;
-
-		// Stone uses row 5 of artdex.png.
-		textureRow = 5;
-	}
+        // Spawners are the only current blocks
+        // that are allowed to create Jebubs.
+        spawnsJebub = true;
+    }
+    else if (type == BlockType::Dirt)
+    {
+        // Dirt uses row 2 of the texture atlas.
+        textureRow = 2;
+    }
+    else if (type == BlockType::Wood)
+    {
+        // Wood uses row 3 of the texture atlas.
+        textureRow = 3;
+    }
+    else if (type == BlockType::Leaf)
+    {
+        // Leaf uses row 4 of the texture atlas.
+        textureRow = 4;
+    }
+    else if (type == BlockType::Stone)
+    {
+        // Stone uses row 5 of the texture atlas.
+        textureRow = 5;
+    }
 }

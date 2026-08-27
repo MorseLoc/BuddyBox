@@ -2,73 +2,121 @@
 
 #include <glm/glm.hpp>
 
-// Forward declaration.
-// This tells C++ that GLFWwindow exists without needing
-// to include all of GLFW inside Player.h.
-struct GLFWwindow;
 
-// Forward declaration.
+// Forward declarations.
+//
+// These tell C++ that these types exist without forcing
+// Player.h to include their full header files.
+struct GLFWwindow;
 struct World;
 
 
-// Represents the player in the world.
+// ============================================================
+// Player
+//
+// Represents the player inside the BuddyBox world.
+//
+// The Player stores:
+// - Position
+// - Collision-box size
+// - Walking speed
+// - Vertical movement
+// - Grounded state
+//
+// Player.cpp handles movement, gravity, jumping,
+// and collision with the world.
+// ============================================================
+
 struct Player
 {
-	// The player's position in the 3D world.
-	//
-	// X = left/right
-	// Y = up/down
-	// Z = forward/backward
-	glm::vec3 position;
+    // --------------------------------------------------------
+    // Position and size
+    // --------------------------------------------------------
+
+    // Center position of the player in the 3D world.
+    //
+    // X = left / right
+    // Y = up / down
+    // Z = forward / backward
+    glm::vec3 position;
 
 
-	// The size of the player's invisible collision box.
-	//
-	// X = width
-	// Y = height
-	// Z = depth
-	glm::vec3 size;
+    // Size of the player's invisible collision box.
+    //
+    // X = width
+    // Y = height
+    // Z = depth
+    glm::vec3 size;
 
 
-	// How fast the player walks.
-	// Measured in world units per second.
-	float speed;
+    // --------------------------------------------------------
+    // Movement
+    // --------------------------------------------------------
 
-	// The player's current movement speed on the Y axis.
-	//
-	// Negative = falling
-	// Positive = moving upward
-	// Zero = not moving vertically
-	float verticalVelocity;
+    // Horizontal walking speed.
+    // Measured in world units per second.
+    float speed;
 
 
-	// Whether the player is currently standing
-	// on something solid.
-	bool grounded;
+    // Current movement speed on the Y axis.
+    //
+    // Positive = moving upward
+    // Negative = falling
+    // Zero     = no vertical movement
+    float verticalVelocity;
 
 
-	// Constructor.
-	// Gives a new player its starting values.
-	Player();
+    // true when the player is standing on solid ground.
+    bool grounded;
 
-	// Checks whether the player's collision box
-	// would overlap any solid block in the world.
-	bool collidesWithWorld(
-		const glm::vec3& testPosition,
-		const World& world
-	) const;
 
-	// Handles the player's WASD movement.
-	//
-	// window = lets us check which keys are pressed
-	// deltaTime = keeps movement speed independent of FPS
-	// cameraFront = tells us which way the player is facing
-	// cameraUp = helps calculate left and right
-	void move(
-		GLFWwindow* window,
-		float deltaTime,
-		const glm::vec3& cameraFront,
-		const glm::vec3& cameraUp,
-		const World& world
-	);
+    // --------------------------------------------------------
+    // Constructor
+    // --------------------------------------------------------
+
+    // Creates a player with the default values
+    // defined in Player.cpp.
+    Player();
+
+
+    // --------------------------------------------------------
+    // Collision
+    // --------------------------------------------------------
+
+    // Tests whether the player's collision box would overlap
+    // any solid block at testPosition.
+    //
+    // Returns:
+    // true  = collision
+    // false = position is clear
+    bool collidesWithWorld(
+        const glm::vec3& testPosition,
+        const World& world
+    ) const;
+
+
+    // --------------------------------------------------------
+    // Movement update
+    // --------------------------------------------------------
+
+    // Handles one frame of player movement.
+    //
+    // This includes:
+    // - WASD movement
+    // - Horizontal collision
+    // - Jumping
+    // - Gravity
+    // - Vertical collision
+    //
+    // deltaTime keeps movement independent of frame rate.
+    //
+    // cameraFront tells the player which direction is forward.
+    // cameraUp helps calculate the sideways direction.
+    void move(
+        GLFWwindow* window,
+        float deltaTime,
+        const glm::vec3& cameraFront,
+        const glm::vec3& cameraUp,
+        const World& world
+    );
 };
