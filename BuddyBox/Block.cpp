@@ -1,4 +1,7 @@
 #include "Block.h"
+#include "NPC.h"
+
+
 
 
 // ============================================================
@@ -41,6 +44,11 @@ Block::Block(BlockType blockType)
 
     // Most blocks do not spawn Jebubs.
     spawnsJebub = false;
+    // Start every block's spawn timer at zero.
+    //
+    // Normal blocks never use this.
+    // Spawner blocks count toward 60 seconds.
+    jebubSpawnTimer = 0.0f;
 
 
     // --------------------------------------------------------
@@ -81,4 +89,54 @@ Block::Block(BlockType blockType)
         // Stone uses row 5 of the texture atlas.
         textureRow = 5;
     }
+}
+
+// ============================================================
+// Update block
+//
+// Handles special behavior that belongs to a block.
+//
+// Currently:
+// - Spawner blocks create one Jebub every 60 seconds.
+// ============================================================
+
+void Block::update(
+    float deltaTime,
+    const glm::vec3& position,
+    std::vector<NPC>& npcs
+)
+{
+    // Normal blocks have nothing to update.
+    if (!spawnsJebub)
+    {
+        return;
+    }
+
+
+    // Count time for this individual Spawner.
+    jebubSpawnTimer +=
+        deltaTime;
+
+
+    // Wait until one minute has passed.
+    if (jebubSpawnTimer < 60.0f)
+    {
+        return;
+    }
+
+
+    // Create a Jebub above this Spawner.
+    npcs.emplace_back(
+        NPCType::Jebub,
+        glm::vec3(
+            position.x,
+            position.y + 1.15f,
+            position.z
+        )
+    );
+
+
+    // Start this Spawner's timer again.
+    jebubSpawnTimer =
+        0.0f;
 }

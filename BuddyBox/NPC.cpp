@@ -266,8 +266,13 @@ void NPC::update(
 // Looks for valid blocks within 3 blocks of the NPC
 // and randomly chooses one.
 //
-// For now, Jebubs only choose destinations
-// on roughly the same height level.
+// Jebub can choose:
+// - Ground at the same height
+// - A 1-block drop
+// - A 2-block drop
+//
+// He will not intentionally walk off drops
+// deeper than 2 blocks.
 // ============================================================
 
 void NPC::chooseRandomTarget(
@@ -306,7 +311,7 @@ void NPC::chooseRandomTarget(
     {
         for (int offsetZ = -3; offsetZ <= 3; offsetZ++)
         {
-            // Skip the NPC's current position.
+            // Skip Jebub's current position.
             if (
                 offsetX == 0 &&
                 offsetZ == 0
@@ -324,42 +329,87 @@ void NPC::chooseRandomTarget(
                 startZ + offsetZ;
 
 
-            // The block underneath the NPC's feet.
-            int groundY =
-                startY - 1;
-
-
-            // A valid destination needs:
+            // ------------------------------------------------
+            // Search downward for safe ground
+            // ------------------------------------------------
             //
-            // 1. Solid ground underneath.
-            // 2. Empty space where the NPC will stand.
-            if (
-                world.isSolidAt(
-                    targetX,
-                    groundY,
-                    targetZ
-                )
-                &&
-                !world.hasBlock(
-                    targetX,
-                    startY,
-                    targetZ
-                )
-                )
+            // drop = 0
+            // Same level.
+            //
+            // drop = 1
+            // One block lower.
+            //
+            // drop = 2
+            // Two blocks lower.
+
+            for (int drop = 0; drop <= 2; drop++)
             {
-                possibleTargets.push_back(
-                    glm::vec3(
-                        static_cast<float>(
-                            targetX
-                            ),
+                // Ground block Jebub would stand on.
+                int groundY =
+                    startY - 1 - drop;
 
-                        position.y,
 
-                        static_cast<float>(
-                            targetZ
-                            )
+                // Space containing Jebub's feet/body.
+                int standingY =
+                    groundY + 1;
+
+
+                // Space above Jebub.
+                int headY =
+                    standingY + 1;
+
+
+                // ------------------------------------------------
+                // Valid destination
+                // ------------------------------------------------
+
+                bool hasGround =
+                    world.isSolidAt(
+                        targetX,
+                        groundY,
+                        targetZ
+                    );
+
+
+                bool standingSpaceClear =
+                    !world.hasBlock(
+                        targetX,
+                        standingY,
+                        targetZ
+                    );
+
+
+                bool headSpaceClear =
+                    !world.hasBlock(
+                        targetX,
+                        headY,
+                        targetZ
+                    );
+
+
+                if (
+                    hasGround &&
+                    standingSpaceClear &&
+                    headSpaceClear
                     )
-                );
+                {
+                    // Add this location as a possible target.
+                    possibleTargets.push_back(
+                        glm::vec3(
+                            static_cast<float>(targetX),
+
+                            position.y -
+                            static_cast<float>(drop),
+
+                            static_cast<float>(targetZ)
+                        )
+                    );
+
+
+                    // We found the closest ground at this
+                    // X/Z location, so stop searching downward.
+                    break;
+                }
             }
         }
     }
@@ -461,6 +511,48 @@ void NPC::moveTowardTarget(
     moving =
         true;
 
+    // --------------------------------------------------------
+// Jump over a block in the way
+// --------------------------------------------------------
+
+// Only try to jump while standing on the ground.
+    if (grounded)
+    {
+        // Test a small step forward in the direction
+        // Jebub is currently trying to walk.
+        glm::vec3 forwardTest =
+            position +
+            direction * 0.35f;
+
+        // If moving forward would hit something...
+        if (collidesWithWorld(
+            forwardTest,
+            world
+        ))
+        {
+            // Test the same forward position,
+            // but one block higher.
+            glm::vec3 jumpClearanceTest =
+                forwardTest;
+
+            jumpClearanceTest.y +=
+                1.0f;
+
+            // If there is room above the obstacle,
+            // jump over it.
+            if (!collidesWithWorld(
+                jumpClearanceTest,
+                world
+            ))
+            {
+                verticalVelocity =
+                    7.0f;
+
+                grounded =
+                    false;
+            }
+        }
+    }
 
     // --------------------------------------------------------
     // X-axis movement

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <vector>
+
+class NPC;
 
 
 // ============================================================
@@ -33,11 +36,16 @@ enum class BlockType
 // - Its physical size
 // - Whether it has collision
 // - Whether it can spawn Jebubs
+// - Its Jebub spawn timer
 // - Which texture it uses
 // ============================================================
 
 struct Block
 {
+    // --------------------------------------------------------
+    // Basic block properties
+    // --------------------------------------------------------
+
     // What kind of block this is.
     BlockType type;
 
@@ -52,9 +60,23 @@ struct Block
     bool solid;
 
 
+    // --------------------------------------------------------
+    // Spawner properties
+    // --------------------------------------------------------
+
     // true if this block is allowed to create Jebubs.
     bool spawnsJebub;
 
+
+    // Counts time since this block last spawned a Jebub.
+    //
+    // Only Spawner blocks actually use this timer.
+    float jebubSpawnTimer;
+
+
+    // --------------------------------------------------------
+    // Texture
+    // --------------------------------------------------------
 
     // Which row of the block texture atlas this block uses.
     //
@@ -64,6 +86,24 @@ struct Block
     // 2 = Dirt
     int textureRow;
 
+
+    // --------------------------------------------------------
+    // Block behavior
+    // --------------------------------------------------------
+
+    // Updates special behavior for this block.
+    //
+    // Spawner blocks use this to create Jebubs.
+    void update(
+        float deltaTime,
+        const glm::vec3& position,
+        std::vector<NPC>& npcs
+    );
+
+
+    // --------------------------------------------------------
+    // Constructor
+    // --------------------------------------------------------
 
     // Creates a block of the requested type.
     //

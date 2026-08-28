@@ -22,6 +22,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
 
 
 // STB_IMAGE_IMPLEMENTATION must exist in exactly one .cpp file.
@@ -163,18 +164,8 @@ int main()
     Inventory inventory;
 
 
-    // Temporary test NPC.
-    //
-    // Later this will be replaced by
-    // NPCs created by Spawner blocks.
-    NPC testJebub(
-        NPCType::Jebub,
-        glm::vec3(
-            2.0f,
-            1.15f,
-            2.0f
-        )
-    );
+    // Stores every NPC currently alive.
+    std::vector<NPC> npcs;
 
 
     // --------------------------------------------------------
@@ -338,13 +329,54 @@ int main()
 
 
         // ----------------------------------------------------
-        // NPC update
+// Block updates
+// ----------------------------------------------------
+
+        for (auto& entry : world.blocks)
+        {
+            Block& block =
+                entry.second;
+
+
+            int x =
+                std::get<0>(
+                    entry.first
+                );
+
+            int y =
+                std::get<1>(
+                    entry.first
+                );
+
+            int z =
+                std::get<2>(
+                    entry.first
+                );
+
+
+            block.update(
+                deltaTime,
+                glm::vec3(
+                    static_cast<float>(x),
+                    static_cast<float>(y),
+                    static_cast<float>(z)
+                ),
+                npcs
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // NPC updates
         // ----------------------------------------------------
 
-        testJebub.update(
-            deltaTime,
-            world
-        );
+        for (NPC& npc : npcs)
+        {
+            npc.update(
+                deltaTime,
+                world
+            );
+        }
 
 
         // ----------------------------------------------------
@@ -747,12 +779,14 @@ int main()
         // Draw NPCs
         // ----------------------------------------------------
 
-        npcRenderer.drawNPC(
-            testJebub,
-            renderer,
-            npcAtlasTexture
-        );
-
+        for (const NPC& npc : npcs)
+        {
+            npcRenderer.drawNPC(
+                npc,
+                renderer,
+                npcAtlasTexture
+            );
+        }
 
         // ----------------------------------------------------
         // Draw UI
