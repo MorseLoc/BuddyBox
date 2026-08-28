@@ -445,7 +445,8 @@ unsigned int Renderer::getShaderProgram() const
 void Renderer::drawColoredCube(
     const glm::vec3& position,
     const glm::vec3& size,
-    const glm::vec3& color
+    const glm::vec3& color,
+    float yaw
 )
 {
     glUseProgram(
@@ -494,6 +495,17 @@ void Renderer::drawColoredCube(
             position
         );
 
+	// Rotate the cube around the Y axis.
+    model =
+        glm::rotate(
+            model,
+            glm::radians(yaw),
+            glm::vec3(
+                0.0f,
+                1.0f,
+                0.0f
+            )
+        );
 
     // Stretch the normal 1 x 1 x 1 cube
     // into the requested size.
@@ -538,5 +550,182 @@ void Renderer::drawColoredCube(
     glUniform1i(
         useSolidColorLocation,
         0
+    );
+}
+
+// ============================================================
+// Draw textured cube
+//
+// Draws one cube using a texture atlas.
+//
+// The texture atlas is expected to contain:
+// - 6 cube faces horizontally
+// - One or more texture rows vertically
+//
+// This is used for textured NPC body parts.
+// ============================================================
+
+void Renderer::drawTexturedCube(
+    const glm::vec3& position,
+    const glm::vec3& size,
+    unsigned int texture,
+    int row,
+    int rows,
+    float yaw
+)
+{
+    // Use the normal world shader.
+    glUseProgram(
+        shaderProgram
+    );
+
+
+    // --------------------------------------------------------
+    // Use texture mode
+    // --------------------------------------------------------
+
+    // Make sure the shader does NOT use
+    // the solid-color mode.
+    int useSolidColorLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useSolidColor"
+        );
+
+
+    glUniform1i(
+        useSolidColorLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
+    // Bind texture
+    // --------------------------------------------------------
+
+    glActiveTexture(
+        GL_TEXTURE0
+    );
+
+
+    glBindTexture(
+        GL_TEXTURE_2D,
+        texture
+    );
+
+
+    int textureLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "blockTexture"
+        );
+
+
+    glUniform1i(
+        textureLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
+    // Tell shader which atlas row to use
+    // --------------------------------------------------------
+
+    int textureRowLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "textureRow"
+        );
+
+
+    glUniform1f(
+        textureRowLocation,
+        static_cast<float>(row)
+    );
+
+
+    int atlasRowsLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "atlasRows"
+        );
+
+
+    glUniform1f(
+        atlasRowsLocation,
+        static_cast<float>(rows)
+    );
+
+
+    // --------------------------------------------------------
+    // Create model matrix
+    // --------------------------------------------------------
+
+    glm::mat4 model =
+        glm::mat4(1.0f);
+
+
+    // Move the cube into position.
+    model =
+        glm::translate(
+            model,
+            position
+        );
+
+
+    // Rotate the cube around the vertical Y axis.
+    model =
+        glm::rotate(
+            model,
+            glm::radians(yaw),
+            glm::vec3(
+                0.0f,
+                1.0f,
+                0.0f
+            )
+        );
+
+
+    // Stretch the normal cube into the
+    // requested body-part dimensions.
+    model =
+        glm::scale(
+            model,
+            size
+        );
+
+
+    // --------------------------------------------------------
+    // Send model matrix to shader
+    // --------------------------------------------------------
+
+    int modelLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "model"
+        );
+
+
+    glUniformMatrix4fv(
+        modelLocation,
+        1,
+        GL_FALSE,
+        glm::value_ptr(model)
+    );
+
+
+    // --------------------------------------------------------
+    // Draw cube
+    // --------------------------------------------------------
+
+    glBindVertexArray(
+        VAO
+    );
+
+
+    glDrawArrays(
+        GL_TRIANGLES,
+        0,
+        36
     );
 }

@@ -25,7 +25,6 @@
 
 
 // STB_IMAGE_IMPLEMENTATION must exist in exactly one .cpp file.
-// It provides the actual image-loading code used by stb_image.
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -39,17 +38,16 @@
 #include "inventory.h"
 #include "UIRenderer.h"
 #include "NPC.h"
+#include "NPCRenderer.h"
 
 
 // ============================================================
 // Mouse wheel input
 // ============================================================
 
-// Stores mouse-wheel movement until the game loop handles it.
 double scrollAmount = 0.0;
 
 
-// GLFW automatically calls this whenever the mouse wheel moves.
 void scrollCallback(
     GLFWwindow* window,
     double xOffset,
@@ -78,16 +76,17 @@ int main()
 
 
     // --------------------------------------------------------
-    // 2. Create the game window
+    // 2. Create window
     // --------------------------------------------------------
 
-    GLFWwindow* window = glfwCreateWindow(
-        800,
-        600,
-        "BuddyBox",
-        nullptr,
-        nullptr
-    );
+    GLFWwindow* window =
+        glfwCreateWindow(
+            800,
+            600,
+            "BuddyBox",
+            nullptr,
+            nullptr
+        );
 
 
     if (!window)
@@ -100,23 +99,16 @@ int main()
     }
 
 
-    // Tell OpenGL which window we want to draw into.
     glfwMakeContextCurrent(
         window
     );
 
 
-    // V-Sync:
-    //
-    // 1 = match monitor refresh rate.
-    // 0 = render as fast as possible.
     glfwSwapInterval(
         1
     );
 
 
-    // Hide and lock the cursor
-    // so the mouse controls the camera.
     glfwSetInputMode(
         window,
         GLFW_CURSOR,
@@ -124,7 +116,6 @@ int main()
     );
 
 
-    // Tell GLFW which function handles mouse-wheel movement.
     glfwSetScrollCallback(
         window,
         scrollCallback
@@ -132,7 +123,7 @@ int main()
 
 
     // --------------------------------------------------------
-    // 3. Load OpenGL functions
+    // 3. Load OpenGL
     // --------------------------------------------------------
 
     if (!gladLoadGLLoader(
@@ -157,6 +148,8 @@ int main()
 
     Renderer renderer;
 
+    NPCRenderer npcRenderer;
+
     UIRenderer uiRenderer;
 
     TextureManager textureManager;
@@ -170,13 +163,10 @@ int main()
     Inventory inventory;
 
 
-    // --------------------------------------------------------
-    // Temporary test Jebub
+    // Temporary test NPC.
     //
-    // This will be removed once Spawner blocks
-    // create NPCs automatically.
-    // --------------------------------------------------------
-
+    // Later this will be replaced by
+    // NPCs created by Spawner blocks.
     NPC testJebub(
         NPCType::Jebub,
         glm::vec3(
@@ -188,7 +178,7 @@ int main()
 
 
     // --------------------------------------------------------
-    // Initialize UI renderer
+    // 5. Initialize rendering systems
     // --------------------------------------------------------
 
     if (!uiRenderer.initialize())
@@ -207,15 +197,13 @@ int main()
     }
 
 
-    // Depth testing makes closer 3D objects
-    // cover objects behind them.
     glEnable(
         GL_DEPTH_TEST
     );
 
 
     // --------------------------------------------------------
-    // 5. Load textures
+    // 6. Load textures
     // --------------------------------------------------------
 
     if (!textureManager.loadAtlas(
@@ -236,14 +224,17 @@ int main()
             "textures/ScrollWheel.png"
         );
 
+    unsigned int npcAtlasTexture =
+        textureManager.loadTexture(
+            "textures/NPCdex.png"
+        );
 
-    // Get the block shader created by Renderer.
     unsigned int shaderProgram =
         renderer.getShaderProgram();
 
 
     // --------------------------------------------------------
-    // 6. Load inventory and world
+    // 7. Load inventory and world
     // --------------------------------------------------------
 
     if (!inventory.loadFromFile(
@@ -272,10 +263,9 @@ int main()
 
 
     // --------------------------------------------------------
-    // 7. Variables used by the game loop
+    // 8. Game-loop variables
     // --------------------------------------------------------
 
-    // Time between frames.
     float deltaTime =
         0.0f;
 
@@ -284,10 +274,6 @@ int main()
         0.0f;
 
 
-    // Previous mouse-button states.
-    //
-    // These let one click perform one action
-    // instead of repeating every frame.
     bool leftMouseWasPressed =
         false;
 
@@ -297,7 +283,7 @@ int main()
 
 
     // ========================================================
-    // 8. Main game loop
+    // 9. Main game loop
     // ========================================================
 
     while (!glfwWindowShouldClose(window))
@@ -321,8 +307,6 @@ int main()
             currentFrame;
 
 
-        // Prevent giant movement jumps
-        // after temporary freezes or window dragging.
         if (deltaTime > 0.05f)
         {
             deltaTime =
@@ -331,16 +315,14 @@ int main()
 
 
         // ----------------------------------------------------
-        // Camera and player movement
+        // Camera and player update
         // ----------------------------------------------------
 
-        // Update camera direction first.
         camera.update(
             window
         );
 
 
-        // Then move the player using that direction.
         player.move(
             window,
             deltaTime,
@@ -350,16 +332,13 @@ int main()
         );
 
 
-        // Move the camera to the player's new position.
         camera.updatePosition(
             player.position
         );
 
 
         // ----------------------------------------------------
-        // Update test Jebub
-        //
-        // Temporary until we create a real NPC list.
+        // NPC update
         // ----------------------------------------------------
 
         testJebub.update(
@@ -404,10 +383,6 @@ int main()
             int previousZ;
 
 
-            // Shoot a ray forward from the camera.
-            //
-            // If it hits a block within 5 blocks,
-            // remove that block.
             if (world.raycastBlock(
                 camera.getPosition(),
                 camera.getFront(),
@@ -459,16 +434,10 @@ int main()
                 previousZ
             ))
             {
-                // Create the block currently selected
-                // in the player's hotbar.
                 Block block(
                     inventory.getSelectedBlockType()
                 );
 
-
-                // --------------------------------------------
-                // Player collision box
-                // --------------------------------------------
 
                 glm::vec3 playerMin =
                     player.position -
@@ -480,12 +449,6 @@ int main()
                     (player.size / 2.0f);
 
 
-                // --------------------------------------------
-                // New block collision box
-                // --------------------------------------------
-
-                // BuddyBox blocks are centered on
-                // their grid coordinates.
                 glm::vec3 blockMin(
                     previousX - 0.5f,
                     previousY - 0.5f,
@@ -500,8 +463,6 @@ int main()
                 );
 
 
-                // Check whether the new block
-                // would overlap the player's body.
                 bool overlapsPlayer =
                     playerMax.x > blockMin.x &&
                     playerMin.x < blockMax.x &&
@@ -526,8 +487,6 @@ int main()
         }
 
 
-        // Save mouse-button states
-        // for the next frame.
         leftMouseWasPressed =
             leftMousePressed;
 
@@ -555,8 +514,6 @@ int main()
         );
 
 
-        // Prevent division by zero
-        // if the window is minimized.
         if (windowHeight == 0)
         {
             windowHeight =
@@ -592,10 +549,9 @@ int main()
 
 
         // ----------------------------------------------------
-        // Clear previous frame
+        // Clear frame
         // ----------------------------------------------------
 
-        // Sky color.
         glClearColor(
             0.42f,
             0.75f,
@@ -611,7 +567,7 @@ int main()
 
 
         // ----------------------------------------------------
-        // Prepare block rendering
+        // Prepare world rendering
         // ----------------------------------------------------
 
         glUseProgram(
@@ -619,7 +575,6 @@ int main()
         );
 
 
-        // Use texture slot 0 for the block atlas.
         glActiveTexture(
             GL_TEXTURE0
         );
@@ -644,8 +599,6 @@ int main()
         );
 
 
-        // Make sure normal world blocks
-        // are using texture mode.
         int useSolidColorLocation =
             glGetUniformLocation(
                 shaderProgram,
@@ -658,10 +611,6 @@ int main()
             0
         );
 
-
-        // ----------------------------------------------------
-        // Find shader variables
-        // ----------------------------------------------------
 
         int modelLocation =
             glGetUniformLocation(
@@ -698,10 +647,6 @@ int main()
             );
 
 
-        // ----------------------------------------------------
-        // Send camera matrices to shader
-        // ----------------------------------------------------
-
         glUniformMatrix4fv(
             viewLocation,
             1,
@@ -730,7 +675,7 @@ int main()
 
 
         // ----------------------------------------------------
-        // Draw the world
+        // Draw world
         // ----------------------------------------------------
 
         for (const auto& entry : world.blocks)
@@ -798,92 +743,19 @@ int main()
         }
 
 
-        // ====================================================
-        // Draw test Jebub
-        // ====================================================
-
-        glm::vec3 jebubPosition =
-            testJebub.getPosition();
-
-
-        glm::vec3 jebubColor(
-            1.0f,
-            1.0f,
-            0.0f
-        );
-
-
         // ----------------------------------------------------
-        // Jebub body
+        // Draw NPCs
         // ----------------------------------------------------
 
-        renderer.drawColoredCube(
-            jebubPosition +
-            glm::vec3(
-                0.0f,
-                0.25f,
-                0.0f
-            ),
-
-            glm::vec3(
-                0.8f,
-                0.8f,
-                0.8f
-            ),
-
-            jebubColor
-        );
-
-
-        // ----------------------------------------------------
-        // Jebub left leg
-        // ----------------------------------------------------
-
-        renderer.drawColoredCube(
-            jebubPosition +
-            glm::vec3(
-                -0.20f,
-                -0.40f,
-                0.0f
-            ),
-
-            glm::vec3(
-                0.22f,
-                0.50f,
-                0.22f
-            ),
-
-            jebubColor
-        );
-
-
-        // ----------------------------------------------------
-        // Jebub right leg
-        // ----------------------------------------------------
-
-        renderer.drawColoredCube(
-            jebubPosition +
-            glm::vec3(
-                0.20f,
-                -0.40f,
-                0.0f
-            ),
-
-            glm::vec3(
-                0.22f,
-                0.50f,
-                0.22f
-            ),
-
-            jebubColor
+        npcRenderer.drawNPC(
+            testJebub,
+            renderer,
+            npcAtlasTexture
         );
 
 
         // ----------------------------------------------------
         // Draw UI
-        //
-        // UI goes last so it stays on top
-        // of the 3D world and NPCs.
         // ----------------------------------------------------
 
         uiRenderer.drawHotbar(
@@ -902,14 +774,11 @@ int main()
         // Finish frame
         // ----------------------------------------------------
 
-        // Show the frame we just rendered.
         glfwSwapBuffers(
             window
         );
 
 
-        // Process keyboard, mouse,
-        // window, and close events.
         glfwPollEvents();
 
 
@@ -931,14 +800,13 @@ int main()
         }
 
 
-        // Scroll input has now been handled.
         scrollAmount =
             0.0;
     }
 
 
     // ========================================================
-    // 9. Shutdown
+    // 10. Shutdown
     // ========================================================
 
     glfwDestroyWindow(

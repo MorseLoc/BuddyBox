@@ -30,6 +30,8 @@ add_executable(BuddyBox
     "UIrenderer.h"
     "NPC.cpp"
     "NPC.h"
+    "NPCrenderer.cpp"
+    "NPCrenderer.h"
 )
 
 configure_file(
@@ -55,6 +57,12 @@ configure_file(
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/textures/ScrollWheel.png"
     "${CMAKE_CURRENT_BINARY_DIR}/textures/ScrollWheel.png"
+    COPYONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/textures/NPCdex.png"
+    "${CMAKE_CURRENT_BINARY_DIR}/textures/NPCdex.png"
     COPYONLY
 )
 

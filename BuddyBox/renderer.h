@@ -35,7 +35,25 @@ public:
     void drawColoredCube(
         const glm::vec3& position,
         const glm::vec3& size,
-        const glm::vec3& color
+        const glm::vec3& color,
+        float yaw = 0.0f
+    );
+
+    // Draws one cube using a texture atlas.
+//
+// position = center of the cube
+// size     = width, height, depth
+// texture  = OpenGL texture ID
+// row      = which 16-pixel-high row to use
+// rows     = total number of rows in the texture
+// yaw      = rotation around the Y axis
+    void drawTexturedCube(
+        const glm::vec3& position,
+        const glm::vec3& size,
+        unsigned int texture,
+        int row,
+        int rows,
+        float yaw = 0.0f
     );
 
     // Returns the shader program used to draw blocks.

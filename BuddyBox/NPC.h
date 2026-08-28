@@ -84,6 +84,20 @@ public:
     // Returns what kind of NPC this is.
     NPCType getType() const;
 
+    // Returns the direction the NPC is facing.
+    //
+    // Measured in degrees around the Y axis.
+    float getFacingYaw() const;
+
+    // Returns how much the legs should swing.
+    //
+    // Used only for drawing the walking animation.
+    float getWalkAnimationTime() const;
+
+
+    // Returns true when the NPC is currently trying to walk.
+    bool isMoving() const;
+
 
 private:
     // --------------------------------------------------------
@@ -123,6 +137,11 @@ private:
     // in world units per second.
     float speed;
 
+    // Direction the NPC is facing.
+    //
+    // Measured in degrees around the Y axis.
+    float facingYaw;
+
 
     // Current movement speed on the Y axis.
     //
@@ -135,6 +154,17 @@ private:
     // true when the NPC is standing
     // on a solid block.
     bool grounded;
+
+    // Position from the previous frame.
+    //
+    // Used to check whether the NPC
+    // is actually making progress.
+    glm::vec3 lastPosition;
+
+
+    // Counts how long the NPC has been
+    // trying to move without getting anywhere.
+    float stuckTimer;
 
 
     // --------------------------------------------------------
@@ -174,4 +204,11 @@ private:
         const glm::vec3& testPosition,
         const World& world
     ) const;
+
+    // Tracks time used for the walking animation.
+    float walkAnimationTime;
+
+
+    // True while the NPC is actively moving toward a target.
+    bool moving;
 };
