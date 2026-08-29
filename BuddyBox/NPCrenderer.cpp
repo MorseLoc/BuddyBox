@@ -109,7 +109,7 @@ void NPCRenderer::drawJebub(
 
         0,  // Row 0 = Jebub body
 
-        2,  // NPCdex currently has 2 rows
+        1,  // NPCdex currently has 1 rows
 
         jebubYaw
     );

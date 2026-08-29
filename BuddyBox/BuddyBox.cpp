@@ -707,14 +707,110 @@ int main()
 
 
         // ----------------------------------------------------
-        // Draw world
-        // ----------------------------------------------------
+ // Draw world
+ //
+ // Only draws cube faces that are exposed to air.
+ //
+ // A face touching another solid block is invisible,
+ // so there is no reason to send it to the GPU.
+ // ----------------------------------------------------
 
         for (const auto& entry : world.blocks)
         {
             const Block& block =
                 entry.second;
 
+
+            int x =
+                std::get<0>(
+                    entry.first
+                );
+
+            int y =
+                std::get<1>(
+                    entry.first
+                );
+
+            int z =
+                std::get<2>(
+                    entry.first
+                );
+
+
+            // ------------------------------------------------
+            // Check which sides of this block are exposed
+            // ------------------------------------------------
+
+            bool frontVisible =
+                !world.isSolidAt(
+                    x,
+                    y,
+                    z + 1
+                );
+
+
+            bool backVisible =
+                !world.isSolidAt(
+                    x,
+                    y,
+                    z - 1
+                );
+
+
+            bool leftVisible =
+                !world.isSolidAt(
+                    x - 1,
+                    y,
+                    z
+                );
+
+
+            bool rightVisible =
+                !world.isSolidAt(
+                    x + 1,
+                    y,
+                    z
+                );
+
+
+            bool topVisible =
+                !world.isSolidAt(
+                    x,
+                    y + 1,
+                    z
+                );
+
+
+            bool bottomVisible =
+                !world.isSolidAt(
+                    x,
+                    y - 1,
+                    z
+                );
+
+
+            // ------------------------------------------------
+            // Completely buried block
+            //
+            // Skip everything else for this block.
+            // ------------------------------------------------
+
+            if (
+                !frontVisible &&
+                !backVisible &&
+                !leftVisible &&
+                !rightVisible &&
+                !topVisible &&
+                !bottomVisible
+                )
+            {
+                continue;
+            }
+
+
+            // ------------------------------------------------
+            // Block texture
+            // ------------------------------------------------
 
             glUniform1f(
                 textureRowLocation,
@@ -724,23 +820,9 @@ int main()
             );
 
 
-            int x =
-                std::get<0>(
-                    entry.first
-                );
-
-
-            int y =
-                std::get<1>(
-                    entry.first
-                );
-
-
-            int z =
-                std::get<2>(
-                    entry.first
-                );
-
+            // ------------------------------------------------
+            // Block position
+            // ------------------------------------------------
 
             glm::mat4 model =
                 glm::mat4(
@@ -767,11 +849,77 @@ int main()
             );
 
 
-            glDrawArrays(
-                GL_TRIANGLES,
-                0,
-                36
-            );
+            // ------------------------------------------------
+            // Draw only visible faces
+            //
+            // Each cube face contains 6 vertices.
+            // ------------------------------------------------
+
+
+            // Front face
+            if (frontVisible)
+            {
+                glDrawArrays(
+                    GL_TRIANGLES,
+                    0,
+                    6
+                );
+            }
+
+
+            // Back face
+            if (backVisible)
+            {
+                glDrawArrays(
+                    GL_TRIANGLES,
+                    6,
+                    6
+                );
+            }
+
+
+            // Left face
+            if (leftVisible)
+            {
+                glDrawArrays(
+                    GL_TRIANGLES,
+                    12,
+                    6
+                );
+            }
+
+
+            // Right face
+            if (rightVisible)
+            {
+                glDrawArrays(
+                    GL_TRIANGLES,
+                    18,
+                    6
+                );
+            }
+
+
+            // Top face
+            if (topVisible)
+            {
+                glDrawArrays(
+                    GL_TRIANGLES,
+                    24,
+                    6
+                );
+            }
+
+
+            // Bottom face
+            if (bottomVisible)
+            {
+                glDrawArrays(
+                    GL_TRIANGLES,
+                    30,
+                    6
+                );
+            }
         }
 
 
