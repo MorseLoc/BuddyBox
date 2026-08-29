@@ -10,19 +10,24 @@
 // - Running the main game loop
 // - Handling block breaking / placing
 // - Updating NPCs
-// - Drawing the world, NPCs, and UI
+// - Drawing chunk meshes, NPCs, and UI
 // - Shutting the game down cleanly
 // ============================================================
+
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <vector>
+#include <memory>
+#include <set>
+#include <tuple>
+#include <map>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <vector>
 
 
 // STB_IMAGE_IMPLEMENTATION must exist in exactly one .cpp file.
@@ -41,9 +46,6 @@
 #include "NPC.h"
 #include "NPCRenderer.h"
 #include "ChunkMesh.h"
-
-#include <memory>
-#include <set>
 
 
 // ============================================================
@@ -75,7 +77,9 @@ int main()
 
     if (!glfwInit())
     {
-        std::cout << "GLFW failed to start.\n";
+        std::cout
+            << "GLFW failed to start.\n";
+
         return -1;
     }
 
@@ -96,7 +100,8 @@ int main()
 
     if (!window)
     {
-        std::cout << "Window creation failed.\n";
+        std::cout
+            << "Window creation failed.\n";
 
         glfwTerminate();
 
@@ -135,7 +140,8 @@ int main()
         (GLADloadproc)glfwGetProcAddress
     ))
     {
-        std::cout << "GLAD failed to start.\n";
+        std::cout
+            << "GLAD failed to start.\n";
 
         glfwDestroyWindow(
             window
@@ -171,12 +177,242 @@ int main()
     // Stores every NPC currently alive.
     std::vector<NPC> npcs;
 
-    // Stores the GPU mesh for every 16x16x16 chunk.
-    std::vector<std::unique_ptr<ChunkMesh>> chunkMeshes;
 
+    std::map<
+        std::tuple<int, int, int>,
+        std::unique_ptr<ChunkMesh>
+    > chunkMeshes;
 
     // --------------------------------------------------------
-    // 5. Initialize rendering systems
+    // 5. Chunk helper
+    // --------------------------------------------------------
+
+    // Converts a world block coordinate into its chunk coordinate.
+    //
+    // This version also works with negative coordinates.
+    auto getChunkCoordinate =
+        [](int blockCoordinate)
+        {
+            if (blockCoordinate >= 0)
+            {
+                return
+                    blockCoordinate /
+                    ChunkMesh::CHUNK_SIZE;
+            }
+
+            return
+                (
+                    blockCoordinate -
+                    (ChunkMesh::CHUNK_SIZE - 1)
+                    )
+                /
+                ChunkMesh::CHUNK_SIZE;
+        };
+
+
+    // Rebuilds all chunk meshes from the current World data.
+    //
+    // For now this is deliberately simple.
+    // Later we can rebuild only the chunk that changed.
+    auto rebuildAllChunks =
+        [&]()
+        {
+            // Delete the old GPU chunk meshes.
+            chunkMeshes.clear();
+
+
+            // Find all chunks that currently contain blocks.
+            std::set<
+                std::tuple<int, int, int>
+            > usedChunks;
+
+
+            for (const auto& entry : world.blocks)
+            {
+                int blockX =
+                    std::get<0>(
+                        entry.first
+                    );
+
+                int blockY =
+                    std::get<1>(
+                        entry.first
+                    );
+
+                int blockZ =
+                    std::get<2>(
+                        entry.first
+                    );
+
+
+                int chunkX =
+                    getChunkCoordinate(
+                        blockX
+                    );
+
+                int chunkY =
+                    getChunkCoordinate(
+                        blockY
+                    );
+
+                int chunkZ =
+                    getChunkCoordinate(
+                        blockZ
+                    );
+
+
+                usedChunks.insert(
+                    std::make_tuple(
+                        chunkX,
+                        chunkY,
+                        chunkZ
+                    )
+                );
+            }
+
+
+            // Build one mesh for each used chunk.
+            for (
+                const auto& chunkPosition :
+                usedChunks
+                )
+            {
+                int chunkX =
+                    std::get<0>(
+                        chunkPosition
+                    );
+
+                int chunkY =
+                    std::get<1>(
+                        chunkPosition
+                    );
+
+                int chunkZ =
+                    std::get<2>(
+                        chunkPosition
+                    );
+
+
+                auto chunk =
+                    std::make_unique<
+                    ChunkMesh
+                    >();
+
+
+                chunk->build(
+                    world,
+                    chunkX,
+                    chunkY,
+                    chunkZ
+                );
+
+
+                chunkMeshes[
+                    std::make_tuple(
+                        chunkX,
+                        chunkY,
+                        chunkZ
+                    )
+                ] = std::move(chunk);
+            }
+        };
+
+        // --------------------------------------------------------
+// Rebuild one specific chunk
+// --------------------------------------------------------
+
+        auto rebuildChunk =
+            [&](int chunkX, int chunkY, int chunkZ)
+            {
+                auto chunk =
+                    std::make_unique<ChunkMesh>();
+
+                chunk->build(
+                    world,
+                    chunkX,
+                    chunkY,
+                    chunkZ
+                );
+
+                chunkMeshes[
+                    std::make_tuple(
+                        chunkX,
+                        chunkY,
+                        chunkZ
+                    )
+                ] = std::move(chunk);
+            };
+
+
+        // --------------------------------------------------------
+        // Rebuild the chunk containing a changed block
+        // and its six neighboring chunks.
+        //
+        // Neighbor chunks matter because changing a block along a
+        // chunk edge can expose/hide a face in the next chunk.
+        // --------------------------------------------------------
+
+        auto rebuildChunksAroundBlock =
+            [&](int blockX, int blockY, int blockZ)
+            {
+                int chunkX =
+                    getChunkCoordinate(blockX);
+
+                int chunkY =
+                    getChunkCoordinate(blockY);
+
+                int chunkZ =
+                    getChunkCoordinate(blockZ);
+
+
+                // Changed block's chunk.
+                rebuildChunk(
+                    chunkX,
+                    chunkY,
+                    chunkZ
+                );
+
+
+                // Neighboring chunks.
+                rebuildChunk(
+                    chunkX + 1,
+                    chunkY,
+                    chunkZ
+                );
+
+                rebuildChunk(
+                    chunkX - 1,
+                    chunkY,
+                    chunkZ
+                );
+
+                rebuildChunk(
+                    chunkX,
+                    chunkY + 1,
+                    chunkZ
+                );
+
+                rebuildChunk(
+                    chunkX,
+                    chunkY - 1,
+                    chunkZ
+                );
+
+                rebuildChunk(
+                    chunkX,
+                    chunkY,
+                    chunkZ + 1
+                );
+
+                rebuildChunk(
+                    chunkX,
+                    chunkY,
+                    chunkZ - 1
+                );
+            };
+
+    // --------------------------------------------------------
+    // 6. Initialize rendering systems
     // --------------------------------------------------------
 
     if (!uiRenderer.initialize())
@@ -201,7 +437,7 @@ int main()
 
 
     // --------------------------------------------------------
-    // 6. Load textures
+    // 7. Load textures
     // --------------------------------------------------------
 
     if (!textureManager.loadAtlas(
@@ -222,17 +458,19 @@ int main()
             "textures/ScrollWheel.png"
         );
 
+
     unsigned int npcAtlasTexture =
         textureManager.loadTexture(
             "textures/NPCdex.png"
         );
+
 
     unsigned int shaderProgram =
         renderer.getShaderProgram();
 
 
     // --------------------------------------------------------
-    // 7. Load inventory and world
+    // 8. Load inventory
     // --------------------------------------------------------
 
     if (!inventory.loadFromFile(
@@ -242,6 +480,11 @@ int main()
         std::cout
             << "Failed to load inventory.txt\n";
     }
+
+
+    // --------------------------------------------------------
+    // 9. Load world
+    // --------------------------------------------------------
 
     if (!world.loadFromFile(
         "test.world"
@@ -258,99 +501,8 @@ int main()
             << "\n";
 
 
-        // ========================================================
-        // Find every chunk used by the world
-        // ========================================================
-
-        std::set<
-            std::tuple<int, int, int>
-        > usedChunks;
-
-
-        // Converts a block coordinate into a chunk coordinate.
-        //
-        // This also works correctly for negative coordinates.
-        auto getChunkCoordinate =
-            [](int blockCoordinate)
-            {
-                if (blockCoordinate >= 0)
-                {
-                    return blockCoordinate /
-                        ChunkMesh::CHUNK_SIZE;
-                }
-
-                return
-                    (blockCoordinate -
-                        (ChunkMesh::CHUNK_SIZE - 1))
-                    /
-                    ChunkMesh::CHUNK_SIZE;
-            };
-
-
-        for (const auto& entry : world.blocks)
-        {
-            int blockX =
-                std::get<0>(entry.first);
-
-            int blockY =
-                std::get<1>(entry.first);
-
-            int blockZ =
-                std::get<2>(entry.first);
-
-
-            int chunkX =
-                getChunkCoordinate(blockX);
-
-            int chunkY =
-                getChunkCoordinate(blockY);
-
-            int chunkZ =
-                getChunkCoordinate(blockZ);
-
-
-            usedChunks.insert(
-                std::make_tuple(
-                    chunkX,
-                    chunkY,
-                    chunkZ
-                )
-            );
-        }
-
-
-        // ========================================================
-        // Build one GPU mesh for each chunk
-        // ========================================================
-
-        for (const auto& chunkPosition : usedChunks)
-        {
-            int chunkX =
-                std::get<0>(chunkPosition);
-
-            int chunkY =
-                std::get<1>(chunkPosition);
-
-            int chunkZ =
-                std::get<2>(chunkPosition);
-
-
-            auto chunk =
-                std::make_unique<ChunkMesh>();
-
-
-            chunk->build(
-                world,
-                chunkX,
-                chunkY,
-                chunkZ
-            );
-
-
-            chunkMeshes.push_back(
-                std::move(chunk)
-            );
-        }
+        // Build the world's initial chunk meshes.
+        rebuildAllChunks();
 
 
         std::cout
@@ -361,7 +513,7 @@ int main()
 
 
     // --------------------------------------------------------
-    // 8. Game-loop variables
+    // 10. Game-loop variables
     // --------------------------------------------------------
 
     float deltaTime =
@@ -381,10 +533,12 @@ int main()
 
 
     // ========================================================
-    // 9. Main game loop
+    // 11. Main game loop
     // ========================================================
 
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(
+        window
+    ))
     {
         // ----------------------------------------------------
         // Frame timing
@@ -413,13 +567,17 @@ int main()
 
 
         // ----------------------------------------------------
-        // Camera and player update
+        // Camera update
         // ----------------------------------------------------
 
         camera.update(
             window
         );
 
+
+        // ----------------------------------------------------
+        // Player update
+        // ----------------------------------------------------
 
         player.move(
             window,
@@ -436,8 +594,8 @@ int main()
 
 
         // ----------------------------------------------------
-// Block updates
-// ----------------------------------------------------
+        // Block updates
+        // ----------------------------------------------------
 
         for (auto& entry : world.blocks)
         {
@@ -463,11 +621,13 @@ int main()
 
             block.update(
                 deltaTime,
+
                 glm::vec3(
                     static_cast<float>(x),
                     static_cast<float>(y),
                     static_cast<float>(z)
                 ),
+
                 npcs
             );
         }
@@ -494,18 +654,22 @@ int main()
             glfwGetMouseButton(
                 window,
                 GLFW_MOUSE_BUTTON_LEFT
-            ) == GLFW_PRESS;
+            )
+            ==
+            GLFW_PRESS;
 
 
         bool rightMousePressed =
             glfwGetMouseButton(
                 window,
                 GLFW_MOUSE_BUTTON_RIGHT
-            ) == GLFW_PRESS;
+            )
+            ==
+            GLFW_PRESS;
 
 
         // ----------------------------------------------------
-        // Break blocks
+        // Break block
         // ----------------------------------------------------
 
         if (
@@ -526,9 +690,11 @@ int main()
                 camera.getPosition(),
                 camera.getFront(),
                 5.0f,
+
                 hitX,
                 hitY,
                 hitZ,
+
                 previousX,
                 previousY,
                 previousZ
@@ -539,12 +705,19 @@ int main()
                     hitY,
                     hitZ
                 );
+
+
+                rebuildChunksAroundBlock(
+                    hitX,
+                    hitY,
+                    hitZ
+                );
             }
         }
 
 
         // ----------------------------------------------------
-        // Place blocks
+        // Place block
         // ----------------------------------------------------
 
         if (
@@ -565,9 +738,11 @@ int main()
                 camera.getPosition(),
                 camera.getFront(),
                 5.0f,
+
                 hitX,
                 hitY,
                 hitZ,
+
                 previousX,
                 previousY,
                 previousZ
@@ -620,6 +795,13 @@ int main()
                         previousY,
                         previousZ,
                         block
+                    );
+
+
+                    rebuildChunksAroundBlock(
+                        previousX,
+                        previousY,
+                        previousZ
                     );
                 }
             }
@@ -772,13 +954,6 @@ int main()
             );
 
 
-        int textureRowLocation =
-            glGetUniformLocation(
-                shaderProgram,
-                "textureRow"
-            );
-
-
         int atlasRowsLocation =
             glGetUniformLocation(
                 shaderProgram,
@@ -786,11 +961,24 @@ int main()
             );
 
 
+        int useVertexTextureRowLocation =
+            glGetUniformLocation(
+                shaderProgram,
+                "useVertexTextureRow"
+            );
+
+
+        // ----------------------------------------------------
+        // Camera uniforms
+        // ----------------------------------------------------
+
         glUniformMatrix4fv(
             viewLocation,
             1,
             GL_FALSE,
-            glm::value_ptr(view)
+            glm::value_ptr(
+                view
+            )
         );
 
 
@@ -798,235 +986,57 @@ int main()
             projectionLocation,
             1,
             GL_FALSE,
-            glm::value_ptr(projection)
+            glm::value_ptr(
+                projection
+            )
         );
 
 
         glUniform1f(
             atlasRowsLocation,
+
             static_cast<float>(
                 textureManager.getBlockCount()
                 )
         );
 
 
-        renderer.bindCube();
+        // ----------------------------------------------------
+        // Chunk model matrix
+        // ----------------------------------------------------
+
+        // Chunk vertices are already stored in world space,
+        // so they do not need individual translation matrices.
+        glm::mat4 chunkModel =
+            glm::mat4(
+                1.0f
+            );
+
+
+        glUniformMatrix4fv(
+            modelLocation,
+            1,
+            GL_FALSE,
+            glm::value_ptr(
+                chunkModel
+            )
+        );
+
+
+        // Chunk vertices contain their own texture-row data.
+        glUniform1i(
+            useVertexTextureRowLocation,
+            1
+        );
 
 
         // ----------------------------------------------------
- // Draw world
- //
- // Only draws cube faces that are exposed to air.
- //
- // A face touching another solid block is invisible,
- // so there is no reason to send it to the GPU.
- // ----------------------------------------------------
+        // Draw world chunk meshes
+        // ----------------------------------------------------
 
-        for (const auto& entry : world.blocks)
+        for (const auto& entry : chunkMeshes)
         {
-            const Block& block =
-                entry.second;
-
-
-            int x =
-                std::get<0>(
-                    entry.first
-                );
-
-            int y =
-                std::get<1>(
-                    entry.first
-                );
-
-            int z =
-                std::get<2>(
-                    entry.first
-                );
-
-
-            // ------------------------------------------------
-            // Check which sides of this block are exposed
-            // ------------------------------------------------
-
-            bool frontVisible =
-                !world.isSolidAt(
-                    x,
-                    y,
-                    z + 1
-                );
-
-
-            bool backVisible =
-                !world.isSolidAt(
-                    x,
-                    y,
-                    z - 1
-                );
-
-
-            bool leftVisible =
-                !world.isSolidAt(
-                    x - 1,
-                    y,
-                    z
-                );
-
-
-            bool rightVisible =
-                !world.isSolidAt(
-                    x + 1,
-                    y,
-                    z
-                );
-
-
-            bool topVisible =
-                !world.isSolidAt(
-                    x,
-                    y + 1,
-                    z
-                );
-
-
-            bool bottomVisible =
-                !world.isSolidAt(
-                    x,
-                    y - 1,
-                    z
-                );
-
-
-            // ------------------------------------------------
-            // Completely buried block
-            //
-            // Skip everything else for this block.
-            // ------------------------------------------------
-
-            if (
-                !frontVisible &&
-                !backVisible &&
-                !leftVisible &&
-                !rightVisible &&
-                !topVisible &&
-                !bottomVisible
-                )
-            {
-                continue;
-            }
-
-
-            // ------------------------------------------------
-            // Block texture
-            // ------------------------------------------------
-
-            glUniform1f(
-                textureRowLocation,
-                static_cast<float>(
-                    block.textureRow
-                    )
-            );
-
-
-            // ------------------------------------------------
-            // Block position
-            // ------------------------------------------------
-
-            glm::mat4 model =
-                glm::mat4(
-                    1.0f
-                );
-
-
-            model =
-                glm::translate(
-                    model,
-                    glm::vec3(
-                        static_cast<float>(x),
-                        static_cast<float>(y),
-                        static_cast<float>(z)
-                    )
-                );
-
-
-            glUniformMatrix4fv(
-                modelLocation,
-                1,
-                GL_FALSE,
-                glm::value_ptr(model)
-            );
-
-
-            // ------------------------------------------------
-            // Draw only visible faces
-            //
-            // Each cube face contains 6 vertices.
-            // ------------------------------------------------
-
-
-            // Front face
-            if (frontVisible)
-            {
-                glDrawArrays(
-                    GL_TRIANGLES,
-                    0,
-                    6
-                );
-            }
-
-
-            // Back face
-            if (backVisible)
-            {
-                glDrawArrays(
-                    GL_TRIANGLES,
-                    6,
-                    6
-                );
-            }
-
-
-            // Left face
-            if (leftVisible)
-            {
-                glDrawArrays(
-                    GL_TRIANGLES,
-                    12,
-                    6
-                );
-            }
-
-
-            // Right face
-            if (rightVisible)
-            {
-                glDrawArrays(
-                    GL_TRIANGLES,
-                    18,
-                    6
-                );
-            }
-
-
-            // Top face
-            if (topVisible)
-            {
-                glDrawArrays(
-                    GL_TRIANGLES,
-                    24,
-                    6
-                );
-            }
-
-
-            // Bottom face
-            if (bottomVisible)
-            {
-                glDrawArrays(
-                    GL_TRIANGLES,
-                    30,
-                    6
-                );
-            }
+            entry.second->draw();
         }
 
 
@@ -1042,6 +1052,7 @@ int main()
                 npcAtlasTexture
             );
         }
+
 
         // ----------------------------------------------------
         // Draw UI
@@ -1095,8 +1106,13 @@ int main()
 
 
     // ========================================================
-    // 10. Shutdown
+    // 12. Shutdown
     // ========================================================
+
+    // Delete chunk OpenGL objects while the OpenGL context
+    // still exists.
+    chunkMeshes.clear();
+
 
     glfwDestroyWindow(
         window
