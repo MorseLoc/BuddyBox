@@ -40,6 +40,10 @@
 #include "UIRenderer.h"
 #include "NPC.h"
 #include "NPCRenderer.h"
+#include "ChunkMesh.h"
+
+#include <memory>
+#include <set>
 
 
 // ============================================================
@@ -167,6 +171,9 @@ int main()
     // Stores every NPC currently alive.
     std::vector<NPC> npcs;
 
+    // Stores the GPU mesh for every 16x16x16 chunk.
+    std::vector<std::unique_ptr<ChunkMesh>> chunkMeshes;
+
 
     // --------------------------------------------------------
     // 5. Initialize rendering systems
@@ -236,7 +243,6 @@ int main()
             << "Failed to load inventory.txt\n";
     }
 
-
     if (!world.loadFromFile(
         "test.world"
     ))
@@ -249,6 +255,107 @@ int main()
         std::cout
             << "Blocks loaded: "
             << world.blocks.size()
+            << "\n";
+
+
+        // ========================================================
+        // Find every chunk used by the world
+        // ========================================================
+
+        std::set<
+            std::tuple<int, int, int>
+        > usedChunks;
+
+
+        // Converts a block coordinate into a chunk coordinate.
+        //
+        // This also works correctly for negative coordinates.
+        auto getChunkCoordinate =
+            [](int blockCoordinate)
+            {
+                if (blockCoordinate >= 0)
+                {
+                    return blockCoordinate /
+                        ChunkMesh::CHUNK_SIZE;
+                }
+
+                return
+                    (blockCoordinate -
+                        (ChunkMesh::CHUNK_SIZE - 1))
+                    /
+                    ChunkMesh::CHUNK_SIZE;
+            };
+
+
+        for (const auto& entry : world.blocks)
+        {
+            int blockX =
+                std::get<0>(entry.first);
+
+            int blockY =
+                std::get<1>(entry.first);
+
+            int blockZ =
+                std::get<2>(entry.first);
+
+
+            int chunkX =
+                getChunkCoordinate(blockX);
+
+            int chunkY =
+                getChunkCoordinate(blockY);
+
+            int chunkZ =
+                getChunkCoordinate(blockZ);
+
+
+            usedChunks.insert(
+                std::make_tuple(
+                    chunkX,
+                    chunkY,
+                    chunkZ
+                )
+            );
+        }
+
+
+        // ========================================================
+        // Build one GPU mesh for each chunk
+        // ========================================================
+
+        for (const auto& chunkPosition : usedChunks)
+        {
+            int chunkX =
+                std::get<0>(chunkPosition);
+
+            int chunkY =
+                std::get<1>(chunkPosition);
+
+            int chunkZ =
+                std::get<2>(chunkPosition);
+
+
+            auto chunk =
+                std::make_unique<ChunkMesh>();
+
+
+            chunk->build(
+                world,
+                chunkX,
+                chunkY,
+                chunkZ
+            );
+
+
+            chunkMeshes.push_back(
+                std::move(chunk)
+            );
+        }
+
+
+        std::cout
+            << "Chunk meshes built: "
+            << chunkMeshes.size()
             << "\n";
     }
 

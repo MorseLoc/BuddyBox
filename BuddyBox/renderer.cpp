@@ -4,17 +4,18 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+
 // ============================================================
 // Renderer constructor
 //
-// Creates everything needed to draw BuddyBox blocks:
+// Creates:
 //
 // - Cube vertex data
-// - Vertex Buffer Object (VBO)
-// - Vertex Array Object (VAO)
+// - VBO
+// - VAO
 // - Vertex shader
 // - Fragment shader
-// - Final shader program
+// - Shader program
 // ============================================================
 
 Renderer::Renderer()
@@ -23,19 +24,13 @@ Renderer::Renderer()
     // 1. Cube vertex data
     // ========================================================
 
-    // Each vertex stores 6 values:
+    // Each normal cube vertex stores:
     //
-    // X, Y, Z = position
-    // U, V    = texture coordinates
-    // Face    = which cube face this vertex belongs to
+    // X, Y, Z
+    // U, V
+    // face index
     //
-    // A cube has:
-    //
-    // 6 faces
-    // × 2 triangles per face
-    // × 3 vertices per triangle
-    //
-    // = 36 total vertices
+    // = 6 floats
     //
     // Face numbers:
     //
@@ -49,7 +44,7 @@ Renderer::Renderer()
     float cubeVertices[] =
     {
         // ----------------------------------------------------
-        // Front face
+        // Front
         // ----------------------------------------------------
 
         -0.5f, -0.5f,  0.5f,    0.0f, 0.0f, 1.0f,
@@ -62,7 +57,7 @@ Renderer::Renderer()
 
 
         // ----------------------------------------------------
-        // Back face
+        // Back
         // ----------------------------------------------------
 
         -0.5f, -0.5f, -0.5f,    1.0f, 0.0f, 2.0f,
@@ -75,7 +70,7 @@ Renderer::Renderer()
 
 
         // ----------------------------------------------------
-        // Left face
+        // Left
         // ----------------------------------------------------
 
         -0.5f,  0.5f,  0.5f,    1.0f, 1.0f, 3.0f,
@@ -88,7 +83,7 @@ Renderer::Renderer()
 
 
         // ----------------------------------------------------
-        // Right face
+        // Right
         // ----------------------------------------------------
 
          0.5f,  0.5f,  0.5f,    0.0f, 1.0f, 4.0f,
@@ -101,7 +96,7 @@ Renderer::Renderer()
 
 
          // ----------------------------------------------------
-         // Top face
+         // Top
          // ----------------------------------------------------
 
          -0.5f,  0.5f, -0.5f,    0.0f, 1.0f, 0.0f,
@@ -114,7 +109,7 @@ Renderer::Renderer()
 
 
          // ----------------------------------------------------
-         // Bottom face
+         // Bottom
          // ----------------------------------------------------
 
          -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, 5.0f,
@@ -128,11 +123,9 @@ Renderer::Renderer()
 
 
     // ========================================================
-    // 2. Create the Vertex Buffer Object
+    // 2. Create VBO
     // ========================================================
 
-    // The VBO stores the cube's raw vertex data
-    // inside graphics-card memory.
     glGenBuffers(
         1,
         &VBO
@@ -145,10 +138,6 @@ Renderer::Renderer()
     );
 
 
-    // Copy cubeVertices from normal RAM into GPU memory.
-    //
-    // GL_STATIC_DRAW means this data is not expected
-    // to change frequently.
     glBufferData(
         GL_ARRAY_BUFFER,
         sizeof(cubeVertices),
@@ -158,10 +147,9 @@ Renderer::Renderer()
 
 
     // ========================================================
-    // 3. Create the Vertex Array Object
+    // 3. Create VAO
     // ========================================================
 
-    // The VAO remembers how each vertex is organized.
     glGenVertexArrays(
         1,
         &VAO
@@ -173,7 +161,6 @@ Renderer::Renderer()
     );
 
 
-    // Attach our cube VBO to this VAO.
     glBindBuffer(
         GL_ARRAY_BUFFER,
         VBO
@@ -181,14 +168,13 @@ Renderer::Renderer()
 
 
     // --------------------------------------------------------
-    // Vertex attribute 0: position
-    // --------------------------------------------------------
-
-    // Reads:
+    // Attribute 0
+    //
+    // Position:
     //
     // X, Y, Z
-    //
-    // from each group of 6 floats.
+    // --------------------------------------------------------
+
     glVertexAttribPointer(
         0,
         3,
@@ -205,14 +191,13 @@ Renderer::Renderer()
 
 
     // --------------------------------------------------------
-    // Vertex attribute 1: texture coordinates
-    // --------------------------------------------------------
-
-    // Reads:
+    // Attribute 1
+    //
+    // Texture coordinates:
     //
     // U, V
-    //
-    // starting after the first 3 position floats.
+    // --------------------------------------------------------
+
     glVertexAttribPointer(
         1,
         2,
@@ -229,13 +214,11 @@ Renderer::Renderer()
 
 
     // --------------------------------------------------------
-    // Vertex attribute 2: cube face
+    // Attribute 2
+    //
+    // Cube face index
     // --------------------------------------------------------
 
-    // Reads the final float in each vertex.
-    //
-    // The shader uses this value to choose which horizontal
-    // section of the texture atlas belongs to this cube face.
     glVertexAttribPointer(
         2,
         1,
@@ -251,15 +234,25 @@ Renderer::Renderer()
     );
 
 
+    // --------------------------------------------------------
+    // IMPORTANT
+    //
+    // Normal Renderer cubes do NOT contain attribute 3.
+    //
+    // Attribute 3 is only used by ChunkMesh.
+    //
+    // We disable it here so the normal Renderer keeps using
+    // the uniform textureRow instead.
+    // --------------------------------------------------------
+
+    glDisableVertexAttribArray(
+        3
+    );
+
+
     // ========================================================
     // 4. Vertex shader
     // ========================================================
-
-    // The vertex shader runs once for every vertex.
-    //
-    // It:
-    // - Transforms the vertex into camera/screen space
-    // - Calculates the correct texture-atlas coordinates
 
     const char* vertexShaderSource =
         "#version 330 core\n"
@@ -268,43 +261,87 @@ Renderer::Renderer()
         "layout (location = 1) in vec2 textureCoordinate;\n"
         "layout (location = 2) in float faceIndex;\n"
 
+        // Chunk meshes use this.
+        "layout (location = 3) in float vertexTextureRow;\n"
+
+
         "out vec2 texCoord;\n"
+
 
         "uniform mat4 model;\n"
         "uniform mat4 view;\n"
         "uniform mat4 projection;\n"
 
+
+        // Old cube rendering uses this.
         "uniform float textureRow;\n"
+
+        // Number of vertical atlas rows.
         "uniform float atlasRows;\n"
+
+        // false = use textureRow uniform
+        // true  = use vertexTextureRow attribute
+        "uniform bool useVertexTextureRow;\n"
+
 
         "void main()\n"
         "{\n"
 
-        // Convert the cube vertex from model space
-        // into its final position on screen.
+        // Move vertex into screen space.
         "    gl_Position = projection * view * model * vec4(position, 1.0);\n"
 
-        // The atlas contains the six cube faces horizontally.
-        //
-        // faceIndex chooses which face section to use.
+
+        // ----------------------------------------------------
+        // Horizontal atlas position
+        // ----------------------------------------------------
+
         "    float atlasU = (faceIndex + textureCoordinate.x) / 6.0;\n"
 
-        // textureRow chooses which block type to use vertically.
-        "    float atlasV = (textureRow + (1.0 - textureCoordinate.y)) / atlasRows;\n"
+
+        // ----------------------------------------------------
+        // Choose block texture row
+        // ----------------------------------------------------
+
+        "    float activeTextureRow;\n"
+
+
+        "    if (useVertexTextureRow)\n"
+        "    {\n"
+
+        // Chunk mesh:
+        // texture row comes directly from the vertex.
+        "        activeTextureRow = vertexTextureRow;\n"
+
+        "    }\n"
+        "    else\n"
+        "    {\n"
+
+        // Normal cube:
+        // texture row comes from the old uniform.
+        "        activeTextureRow = textureRow;\n"
+
+        "    }\n"
+
+
+        // ----------------------------------------------------
+        // Vertical atlas position
+        // ----------------------------------------------------
+
+        "    float atlasV = (activeTextureRow + (1.0 - textureCoordinate.y)) / atlasRows;\n"
+
 
         "    texCoord = vec2(atlasU, atlasV);\n"
+
 
         "}\n";
 
 
-    // Create the vertex shader object on the GPU.
     unsigned int vertexShader =
         glCreateShader(
             GL_VERTEX_SHADER
         );
 
 
-    // Give OpenGL our shader source code.
     glShaderSource(
         vertexShader,
         1,
@@ -313,7 +350,6 @@ Renderer::Renderer()
     );
 
 
-    // Compile the shader.
     glCompileShader(
         vertexShader
     );
@@ -323,39 +359,44 @@ Renderer::Renderer()
     // 5. Fragment shader
     // ========================================================
 
-    // The fragment shader runs for each pixel produced
-    // while drawing the cube.
-    //
-    // It reads the block texture and chooses the
-    // final pixel color.
-
     const char* fragmentShaderSource =
         "#version 330 core\n"
 
         "in vec2 texCoord;\n"
 
+
         "out vec4 finalColor;\n"
+
 
         "uniform sampler2D blockTexture;\n"
 
+
         "uniform bool useSolidColor;\n"
+
         "uniform vec3 solidColor;\n"
+
 
         "void main()\n"
         "{\n"
 
+
         "    if (useSolidColor)\n"
         "    {\n"
+
         "        finalColor = vec4(solidColor, 1.0);\n"
+
         "    }\n"
         "    else\n"
         "    {\n"
+
         "        finalColor = texture(blockTexture, texCoord);\n"
+
         "    }\n"
+
 
         "}\n";
 
-    // Create the fragment shader object.
+
     unsigned int fragmentShader =
         glCreateShader(
             GL_FRAGMENT_SHADER
@@ -376,11 +417,9 @@ Renderer::Renderer()
 
 
     // ========================================================
-    // 6. Create the shader program
+    // 6. Create shader program
     // ========================================================
 
-    // A shader program combines the vertex shader
-    // and fragment shader into one rendering pipeline.
     shaderProgram =
         glCreateProgram();
 
@@ -397,14 +436,11 @@ Renderer::Renderer()
     );
 
 
-    // Combine the shaders into the finished program.
     glLinkProgram(
         shaderProgram
     );
 
 
-    // Once the program has been linked successfully,
-    // the individual shader objects are no longer needed.
     glDeleteShader(
         vertexShader
     );
@@ -418,9 +454,6 @@ Renderer::Renderer()
 
 // ============================================================
 // Bind cube
-//
-// Activates the cube VAO so OpenGL knows which vertex data
-// should be used by the next drawing command.
 // ============================================================
 
 void Renderer::bindCube()
@@ -433,14 +466,17 @@ void Renderer::bindCube()
 
 // ============================================================
 // Get shader program
-//
-// Gives other parts of the game access to the block shader.
 // ============================================================
 
 unsigned int Renderer::getShaderProgram() const
 {
     return shaderProgram;
 }
+
+
+// ============================================================
+// Draw colored cube
+// ============================================================
 
 void Renderer::drawColoredCube(
     const glm::vec3& position,
@@ -454,13 +490,33 @@ void Renderer::drawColoredCube(
     );
 
 
-    // Tell the shader to ignore textures
-    // and use a plain color instead.
+    // --------------------------------------------------------
+    // Colored cubes do not use chunk texture rows.
+    // --------------------------------------------------------
+
+    int useVertexTextureRowLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useVertexTextureRow"
+        );
+
+
+    glUniform1i(
+        useVertexTextureRowLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
+    // Use solid color
+    // --------------------------------------------------------
+
     int useSolidColorLocation =
         glGetUniformLocation(
             shaderProgram,
             "useSolidColor"
         );
+
 
     glUniform1i(
         useSolidColorLocation,
@@ -468,12 +524,12 @@ void Renderer::drawColoredCube(
     );
 
 
-    // Send the requested RGB color.
     int solidColorLocation =
         glGetUniformLocation(
             shaderProgram,
             "solidColor"
         );
+
 
     glUniform3f(
         solidColorLocation,
@@ -483,19 +539,21 @@ void Renderer::drawColoredCube(
     );
 
 
-    // Start with a normal model matrix.
+    // ========================================================
+    // Model matrix
+    // ========================================================
+
     glm::mat4 model =
         glm::mat4(1.0f);
 
 
-    // Move the cube into position.
     model =
         glm::translate(
             model,
             position
         );
 
-	// Rotate the cube around the Y axis.
+
     model =
         glm::rotate(
             model,
@@ -507,8 +565,7 @@ void Renderer::drawColoredCube(
             )
         );
 
-    // Stretch the normal 1 x 1 x 1 cube
-    // into the requested size.
+
     model =
         glm::scale(
             model,
@@ -531,7 +588,10 @@ void Renderer::drawColoredCube(
     );
 
 
-    // Use the cube geometry already owned by Renderer.
+    // ========================================================
+    // Draw
+    // ========================================================
+
     glBindVertexArray(
         VAO
     );
@@ -544,25 +604,18 @@ void Renderer::drawColoredCube(
     );
 
 
-    // IMPORTANT:
-    // Turn solid-color mode back off so normal
-    // world blocks keep using their textures.
+    // Turn solid color mode back off.
     glUniform1i(
         useSolidColorLocation,
         0
     );
 }
 
+
 // ============================================================
 // Draw textured cube
 //
-// Draws one cube using a texture atlas.
-//
-// The texture atlas is expected to contain:
-// - 6 cube faces horizontally
-// - One or more texture rows vertically
-//
-// This is used for textured NPC body parts.
+// Used by things such as textured NPC body parts.
 // ============================================================
 
 void Renderer::drawTexturedCube(
@@ -574,18 +627,15 @@ void Renderer::drawTexturedCube(
     float yaw
 )
 {
-    // Use the normal world shader.
     glUseProgram(
         shaderProgram
     );
 
 
-    // --------------------------------------------------------
-    // Use texture mode
-    // --------------------------------------------------------
+    // ========================================================
+    // Normal cube texture mode
+    // ========================================================
 
-    // Make sure the shader does NOT use
-    // the solid-color mode.
     int useSolidColorLocation =
         glGetUniformLocation(
             shaderProgram,
@@ -599,9 +649,29 @@ void Renderer::drawTexturedCube(
     );
 
 
-    // --------------------------------------------------------
+    // IMPORTANT:
+    //
+    // This is an old-style cube, not a ChunkMesh.
+    //
+    // Therefore its texture row comes from the
+    // textureRow uniform.
+
+    int useVertexTextureRowLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useVertexTextureRow"
+        );
+
+
+    glUniform1i(
+        useVertexTextureRowLocation,
+        0
+    );
+
+
+    // ========================================================
     // Bind texture
-    // --------------------------------------------------------
+    // ========================================================
 
     glActiveTexture(
         GL_TEXTURE0
@@ -627,9 +697,9 @@ void Renderer::drawTexturedCube(
     );
 
 
-    // --------------------------------------------------------
-    // Tell shader which atlas row to use
-    // --------------------------------------------------------
+    // ========================================================
+    // Texture atlas settings
+    // ========================================================
 
     int textureRowLocation =
         glGetUniformLocation(
@@ -657,15 +727,14 @@ void Renderer::drawTexturedCube(
     );
 
 
-    // --------------------------------------------------------
-    // Create model matrix
-    // --------------------------------------------------------
+    // ========================================================
+    // Model matrix
+    // ========================================================
 
     glm::mat4 model =
         glm::mat4(1.0f);
 
 
-    // Move the cube into position.
     model =
         glm::translate(
             model,
@@ -673,7 +742,6 @@ void Renderer::drawTexturedCube(
         );
 
 
-    // Rotate the cube around the vertical Y axis.
     model =
         glm::rotate(
             model,
@@ -686,18 +754,12 @@ void Renderer::drawTexturedCube(
         );
 
 
-    // Stretch the normal cube into the
-    // requested body-part dimensions.
     model =
         glm::scale(
             model,
             size
         );
 
-
-    // --------------------------------------------------------
-    // Send model matrix to shader
-    // --------------------------------------------------------
 
     int modelLocation =
         glGetUniformLocation(
@@ -714,9 +776,9 @@ void Renderer::drawTexturedCube(
     );
 
 
-    // --------------------------------------------------------
+    // ========================================================
     // Draw cube
-    // --------------------------------------------------------
+    // ========================================================
 
     glBindVertexArray(
         VAO

@@ -32,6 +32,8 @@ add_executable(BuddyBox
     "NPC.h"
     "NPCrenderer.cpp"
     "NPCrenderer.h"
+    "ChunkMesh.h"
+    "ChunkMesh.cpp"
 )
 
 configure_file(
