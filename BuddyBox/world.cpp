@@ -82,11 +82,23 @@ void World::placeBlock(
             z
         );
 
-
     blocks.insert_or_assign(
         position,
         block
     );
+
+    if (block.needsUpdate())
+    {
+        activeBlocks.insert(
+            position
+        );
+    }
+    else
+    {
+        activeBlocks.erase(
+            position
+        );
+    }
 }
 
 
@@ -109,6 +121,11 @@ void World::removeBlock(
 
 
     blocks.erase(
+        position
+    );
+
+
+    activeBlocks.erase(
         position
     );
 }

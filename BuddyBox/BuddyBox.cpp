@@ -365,7 +365,8 @@ int main()
                     getChunkCoordinate(blockZ);
 
 
-                // Changed block's chunk.
+                // Always rebuild the chunk containing
+                // the changed block.
                 rebuildChunk(
                     chunkX,
                     chunkY,
@@ -373,42 +374,82 @@ int main()
                 );
 
 
-                // Neighboring chunks.
-                rebuildChunk(
-                    chunkX + 1,
-                    chunkY,
-                    chunkZ
-                );
+                // Find where the block sits inside
+                // its 16 x 16 x 16 chunk.
+                int localX =
+                    blockX -
+                    chunkX * ChunkMesh::CHUNK_SIZE;
 
-                rebuildChunk(
-                    chunkX - 1,
-                    chunkY,
-                    chunkZ
-                );
+                int localY =
+                    blockY -
+                    chunkY * ChunkMesh::CHUNK_SIZE;
 
-                rebuildChunk(
-                    chunkX,
-                    chunkY + 1,
-                    chunkZ
-                );
+                int localZ =
+                    blockZ -
+                    chunkZ * ChunkMesh::CHUNK_SIZE;
 
-                rebuildChunk(
-                    chunkX,
-                    chunkY - 1,
-                    chunkZ
-                );
 
-                rebuildChunk(
-                    chunkX,
-                    chunkY,
-                    chunkZ + 1
-                );
+                // Only rebuild neighboring chunks when
+                // the changed block touches that boundary.
 
-                rebuildChunk(
-                    chunkX,
-                    chunkY,
-                    chunkZ - 1
-                );
+                if (localX == 0)
+                {
+                    rebuildChunk(
+                        chunkX - 1,
+                        chunkY,
+                        chunkZ
+                    );
+                }
+
+                if (localX ==
+                    ChunkMesh::CHUNK_SIZE - 1)
+                {
+                    rebuildChunk(
+                        chunkX + 1,
+                        chunkY,
+                        chunkZ
+                    );
+                }
+
+
+                if (localY == 0)
+                {
+                    rebuildChunk(
+                        chunkX,
+                        chunkY - 1,
+                        chunkZ
+                    );
+                }
+
+                if (localY ==
+                    ChunkMesh::CHUNK_SIZE - 1)
+                {
+                    rebuildChunk(
+                        chunkX,
+                        chunkY + 1,
+                        chunkZ
+                    );
+                }
+
+
+                if (localZ == 0)
+                {
+                    rebuildChunk(
+                        chunkX,
+                        chunkY,
+                        chunkZ - 1
+                    );
+                }
+
+                if (localZ ==
+                    ChunkMesh::CHUNK_SIZE - 1)
+                {
+                    rebuildChunk(
+                        chunkX,
+                        chunkY,
+                        chunkZ + 1
+                    );
+                }
             };
 
     // --------------------------------------------------------
@@ -594,28 +635,44 @@ int main()
 
 
         // ----------------------------------------------------
-        // Block updates
-        // ----------------------------------------------------
+// Active block updates
+//
+// Only blocks that actually have ongoing behavior
+// are updated every frame.
+// ----------------------------------------------------
 
-        for (auto& entry : world.blocks)
+        for (const auto& position : world.activeBlocks)
         {
+            auto blockIt =
+                world.blocks.find(
+                    position
+                );
+
+
+            // Safety check in case the block no longer exists.
+            if (blockIt == world.blocks.end())
+            {
+                continue;
+            }
+
+
             Block& block =
-                entry.second;
+                blockIt->second;
 
 
             int x =
                 std::get<0>(
-                    entry.first
+                    position
                 );
 
             int y =
                 std::get<1>(
-                    entry.first
+                    position
                 );
 
             int z =
                 std::get<2>(
-                    entry.first
+                    position
                 );
 
 

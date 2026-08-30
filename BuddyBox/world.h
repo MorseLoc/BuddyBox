@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <tuple>
+#include <set>
 
 #include <glm/glm.hpp>
 
@@ -31,117 +32,125 @@
 
 struct World
 {
-    // --------------------------------------------------------
-    // Block storage
-    // --------------------------------------------------------
+	// --------------------------------------------------------
+	// Block storage
+	// --------------------------------------------------------
 
-    // Every block is stored using its X, Y, Z grid position.
-    //
-    // The tuple is the coordinate.
-    // The Block is the block stored there.
-    std::map<
-        std::tuple<int, int, int>,
-        Block
-    > blocks;
+	// Every block is stored using its X, Y, Z grid position.
+	//
+	// The tuple is the coordinate.
+	// The Block is the block stored there.
+	std::map<
+		std::tuple<int, int, int>,
+		Block
+	> blocks;
 
-
-    // --------------------------------------------------------
-    // Block lookup
-    // --------------------------------------------------------
-
-    // Returns true if ANY block exists
-    // at this grid position.
-    bool hasBlock(
-        int x,
-        int y,
-        int z
-    ) const;
+	// Positions of blocks that actually need
+	// to run update() every frame.
+	//
+	// Currently this is just Spawner blocks.
+	std::set<
+		std::tuple<int, int, int>
+	> activeBlocks;
 
 
-    // Returns true if a SOLID block exists
-    // at this grid position.
-    //
-    // Used by player collision.
-    bool isSolidAt(
-        int x,
-        int y,
-        int z
-    ) const;
+	// --------------------------------------------------------
+	// Block lookup
+	// --------------------------------------------------------
+
+	// Returns true if ANY block exists
+	// at this grid position.
+	bool hasBlock(
+		int x,
+		int y,
+		int z
+	) const;
 
 
-    // --------------------------------------------------------
-    // Block editing
-    // --------------------------------------------------------
-
-    // Places a block at this grid position.
-    //
-    // If a block already exists there,
-    // the existing block is replaced.
-    void placeBlock(
-        int x,
-        int y,
-        int z,
-        const Block& block
-    );
+	// Returns true if a SOLID block exists
+	// at this grid position.
+	//
+	// Used by player collision.
+	bool isSolidAt(
+		int x,
+		int y,
+		int z
+	) const;
 
 
-    // Removes the block at this grid position.
-    void removeBlock(
-        int x,
-        int y,
-        int z
-    );
+	// --------------------------------------------------------
+	// Block editing
+	// --------------------------------------------------------
+
+	// Places a block at this grid position.
+	//
+	// If a block already exists there,
+	// the existing block is replaced.
+	void placeBlock(
+		int x,
+		int y,
+		int z,
+		const Block& block
+	);
 
 
-    // --------------------------------------------------------
-    // Raycasting
-    // --------------------------------------------------------
-
-    // Shoots an invisible ray through the block grid
-    // and returns the first block it touches.
-    //
-    // origin:
-    //     Where the ray begins.
-    //
-    // direction:
-    //     Which direction the ray travels.
-    //
-    // maxDistance:
-    //     Maximum distance the ray can travel.
-    //
-    // hitX / hitY / hitZ:
-    //     Coordinates of the block that was hit.
-    //
-    // previousX / previousY / previousZ:
-    //     Grid position immediately before the hit block.
-    //     Used when placing a new block beside it.
-    //
-    // Returns:
-    // true  = a block was hit
-    // false = nothing was hit
-    bool raycastBlock(
-        const glm::vec3& origin,
-        const glm::vec3& direction,
-        float maxDistance,
-        int& hitX,
-        int& hitY,
-        int& hitZ,
-        int& previousX,
-        int& previousY,
-        int& previousZ
-    ) const;
+	// Removes the block at this grid position.
+	void removeBlock(
+		int x,
+		int y,
+		int z
+	);
 
 
-    // --------------------------------------------------------
-    // World loading
-    // --------------------------------------------------------
+	// --------------------------------------------------------
+	// Raycasting
+	// --------------------------------------------------------
 
-    // Loads blocks from a BuddyBox world text file.
-    //
-    // Returns:
-    // true  = file opened successfully
-    // false = file could not be opened
-    bool loadFromFile(
-        const std::string& filename
-    );
+	// Shoots an invisible ray through the block grid
+	// and returns the first block it touches.
+	//
+	// origin:
+	//     Where the ray begins.
+	//
+	// direction:
+	//     Which direction the ray travels.
+	//
+	// maxDistance:
+	//     Maximum distance the ray can travel.
+	//
+	// hitX / hitY / hitZ:
+	//     Coordinates of the block that was hit.
+	//
+	// previousX / previousY / previousZ:
+	//     Grid position immediately before the hit block.
+	//     Used when placing a new block beside it.
+	//
+	// Returns:
+	// true  = a block was hit
+	// false = nothing was hit
+	bool raycastBlock(
+		const glm::vec3& origin,
+		const glm::vec3& direction,
+		float maxDistance,
+		int& hitX,
+		int& hitY,
+		int& hitZ,
+		int& previousX,
+		int& previousY,
+		int& previousZ
+	) const;
+
+
+	// --------------------------------------------------------
+	// World loading
+	// --------------------------------------------------------
+
+	// Loads blocks from a BuddyBox world text file.
+	//
+	// Returns:
+	// true  = file opened successfully
+	// false = file could not be opened
+	bool loadFromFile(
+		const std::string& filename
+	);
 };

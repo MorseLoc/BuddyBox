@@ -140,3 +140,8 @@ void Block::update(
     jebubSpawnTimer =
         0.0f;
 }
+
+bool Block::needsUpdate() const
+{
+    return spawnsJebub;
+}

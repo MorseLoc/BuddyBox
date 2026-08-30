@@ -110,4 +110,6 @@ struct Block
     // Block.cpp uses the type to assign the block's
     // size, collision, texture, and other properties.
     Block(BlockType type);
+
+    bool needsUpdate() const;
 };
