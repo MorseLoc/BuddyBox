@@ -69,7 +69,7 @@ Block::Block(BlockType blockType)
         // Grass uses row 0 of the texture atlas.
         textureRow = 0;
 
-        durability = 3.0f;
+        durability = 0.5f;
 
         dropItem =
             ItemType::GrassBlock;
@@ -90,7 +90,7 @@ Block::Block(BlockType blockType)
         // Dirt uses row 2 of the texture atlas.
         textureRow = 2;
 
-        durability = 3.0f;
+        durability = 0.5f;
 
         dropItem =
             ItemType::DirtBlock;

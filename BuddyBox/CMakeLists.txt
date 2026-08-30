@@ -66,6 +66,12 @@ configure_file(
 )
 
 configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/textures/NumberDex.png"
+    "${CMAKE_CURRENT_BINARY_DIR}/textures/NumberDex.png"
+    COPYONLY
+)
+
+configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/textures/NPCdex.png"
     "${CMAKE_CURRENT_BINARY_DIR}/textures/NPCdex.png"
     COPYONLY
