@@ -14,7 +14,7 @@
 Inventory::Inventory()
 {
     // BuddyBox currently has 6 inventory slots.
-    slots.resize(6);
+    slots.resize(12);
 
 
     // Every slot starts empty.
@@ -177,9 +177,13 @@ void Inventory::cycleSlot(
 
     // Went past the final slot.
     // Wrap around to the beginning.
+    // The hotbar is always slots 0 - 5.
+//
+// Slots 6 - 11 belong to the inventory
+// and should not be selected by the mouse wheel.
     if (
         selectedSlot >=
-        static_cast<int>(slots.size())
+        6
         )
     {
         selectedSlot = 0;
@@ -191,10 +195,78 @@ void Inventory::cycleSlot(
     if (selectedSlot < 0)
     {
         selectedSlot =
-            static_cast<int>(slots.size()) - 1;
+            5;
     }
 }
 
+// ============================================================
+// Add item
+//
+// Adds an item to the player's inventory.
+//
+// First:
+// Try to find an existing stack.
+//
+// Otherwise:
+// Use the first empty slot.
+//
+// Returns:
+// true  = item was added
+// false = inventory is full
+// ============================================================
+
+bool Inventory::addItem(
+    ItemType itemType,
+    int amount
+)
+{
+    // --------------------------------------------------------
+    // First, look for an existing stack
+    // --------------------------------------------------------
+
+    for (InventorySlot& slot : slots)
+    {
+        if (
+            slot.item ==
+            itemType
+            )
+        {
+            slot.amount +=
+                amount;
+
+
+            return true;
+        }
+    }
+
+
+    // --------------------------------------------------------
+    // Otherwise, find an empty slot
+    // --------------------------------------------------------
+
+    for (InventorySlot& slot : slots)
+    {
+        if (
+            slot.item ==
+            ItemType::None
+            )
+        {
+            slot.item =
+                itemType;
+
+
+            slot.amount =
+                amount;
+
+
+            return true;
+        }
+    }
+
+
+    // No existing stack and no empty slots.
+    return false;
+}
 
 // ============================================================
 // Inventory information
@@ -245,8 +317,26 @@ ItemType Inventory::getItemTypeAtSlot(
         slots[slot].item;
 }
 
+// Returns the number of items
+// stored in a specific slot.
+int Inventory::getAmountAtSlot(
+    int slot
+) const
+{
+    return
+        slots[slot].amount;
+}
+
 // Returns the currently selected slot number.
 int Inventory::getSelectedSlot() const
 {
     return selectedSlot;
+}
+
+// Returns the ItemType currently
+// selected by the player.
+ItemType Inventory::getSelectedItemType() const
+{
+    return
+        slots[selectedSlot].item;
 }

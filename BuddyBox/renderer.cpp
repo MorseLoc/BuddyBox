@@ -283,6 +283,9 @@ Renderer::Renderer()
         // true  = use vertexTextureRow attribute
         "uniform bool useVertexTextureRow;\n"
 
+        // true when using the one-column Itemdex texture.
+        "uniform bool useItemAtlas;\n"
+
 
         "void main()\n"
         "{\n"
@@ -292,10 +295,23 @@ Renderer::Renderer()
 
 
         // ----------------------------------------------------
-        // Horizontal atlas position
-        // ----------------------------------------------------
+// Horizontal atlas position
+//
+// Blocks use six horizontal face columns.
+//
+// Items use one horizontal column.
+// ----------------------------------------------------
 
-        "    float atlasU = (faceIndex + textureCoordinate.x) / 6.0;\n"
+"    float atlasU;\n"
+
+"    if (useItemAtlas)\n"
+"    {\n"
+"        atlasU = textureCoordinate.x;\n"
+"    }\n"
+"    else\n"
+"    {\n"
+"        atlasU = (faceIndex + textureCoordinate.x) / 6.0;\n"
+"    }\n"
 
 
         // ----------------------------------------------------
@@ -641,11 +657,31 @@ void Renderer::drawTexturedCube(
     unsigned int texture,
     int row,
     int rows,
-    float yaw
+    float yaw,
+    bool useItemAtlas
 )
 {
     glUseProgram(
         shaderProgram
+    );
+
+    // ========================================================
+// Item atlas mode
+//
+// false = normal 6-column block/NPC texture
+// true  = one-column Itemdex texture
+// ========================================================
+
+    int useItemAtlasLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useItemAtlas"
+        );
+
+
+    glUniform1i(
+        useItemAtlasLocation,
+        useItemAtlas
     );
 
 
@@ -806,5 +842,234 @@ void Renderer::drawTexturedCube(
         GL_TRIANGLES,
         0,
         36
+    );
+
+    // --------------------------------------------------------
+// Restore normal atlas mode
+//
+// Dropped items use the one-column Itemdex.
+//
+// Everything else in the world uses the normal
+// six-column texture atlas, so always reset this
+// when this draw call is finished.
+// --------------------------------------------------------
+
+    glUniform1i(
+        useItemAtlasLocation,
+        0
+    );
+}
+// ============================================================
+// Draw dropped item
+//
+// Draws only the FRONT face of the cube geometry.
+//
+// Because the first 6 vertices in our cube VAO
+// make one rectangle, we can reuse them as a
+// flat item sprite.
+// ============================================================
+
+void Renderer::drawDroppedItem(
+    const glm::vec3& position,
+    unsigned int texture,
+    int row,
+    int rows,
+    float yaw
+)
+{
+    glUseProgram(
+        shaderProgram
+    );
+
+
+    // --------------------------------------------------------
+    // Use textured rendering
+    // --------------------------------------------------------
+
+    int useSolidColorLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useSolidColor"
+        );
+
+    glUniform1i(
+        useSolidColorLocation,
+        0
+    );
+
+
+    // We are supplying one texture row manually.
+    int useVertexTextureRowLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useVertexTextureRow"
+        );
+
+    glUniform1i(
+        useVertexTextureRowLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
+    // Tell the shader this is Itemdex
+    //
+    // Itemdex has ONE horizontal column.
+    // --------------------------------------------------------
+
+    int useItemAtlasLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useItemAtlas"
+        );
+
+    glUniform1i(
+        useItemAtlasLocation,
+        1
+    );
+
+
+    // --------------------------------------------------------
+    // Bind Itemdex texture
+    // --------------------------------------------------------
+
+    glActiveTexture(
+        GL_TEXTURE0
+    );
+
+    glBindTexture(
+        GL_TEXTURE_2D,
+        texture
+    );
+
+
+    int textureLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "blockTexture"
+        );
+
+    glUniform1i(
+        textureLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
+    // Choose the item's row
+    // --------------------------------------------------------
+
+    int textureRowLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "textureRow"
+        );
+
+    glUniform1f(
+        textureRowLocation,
+        static_cast<float>(row)
+    );
+
+
+    int atlasRowsLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "atlasRows"
+        );
+
+    glUniform1f(
+        atlasRowsLocation,
+        static_cast<float>(rows)
+    );
+
+
+    // --------------------------------------------------------
+    // Build model matrix
+    // --------------------------------------------------------
+
+    glm::mat4 model =
+        glm::mat4(1.0f);
+
+
+    // Move sprite into the world.
+    model =
+        glm::translate(
+            model,
+            position
+        );
+
+
+    // Rotate around the Y axis.
+    //
+    // Soon we will calculate this yaw so the
+    // item always faces the player.
+    model =
+        glm::rotate(
+            model,
+            glm::radians(yaw),
+            glm::vec3(
+                0.0f,
+                1.0f,
+                0.0f
+            )
+        );
+
+
+    // Dropped items are smaller than blocks.
+    model =
+        glm::scale(
+            model,
+            glm::vec3(
+                0.5f,
+                0.5f,
+                0.5f
+            )
+        );
+
+
+    int modelLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "model"
+        );
+
+    glUniformMatrix4fv(
+        modelLocation,
+        1,
+        GL_FALSE,
+        glm::value_ptr(model)
+    );
+
+
+    // --------------------------------------------------------
+    // Draw ONE face
+    //
+    // Vertices 0 through 5 are the front
+    // rectangle of our existing cube.
+    // --------------------------------------------------------
+
+    glBindVertexArray(
+        VAO
+    );
+
+    glDrawArrays(
+        GL_TRIANGLES,
+        0,
+        6
+    );
+
+
+    // --------------------------------------------------------
+    // IMPORTANT
+    //
+    // Return the shader to normal block-atlas mode.
+    //
+    // Otherwise Itemdex mode leaks into the world
+    // and turns our textures into abstract cuisine.
+    // --------------------------------------------------------
+
+    glUniform1i(
+        useItemAtlasLocation,
+        0
     );
 }

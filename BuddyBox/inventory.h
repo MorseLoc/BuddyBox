@@ -77,6 +77,24 @@ public:
         int direction
     );
 
+    // --------------------------------------------------------
+// Adding items
+// --------------------------------------------------------
+
+// Adds an item to the inventory.
+//
+// First:
+// Look for an existing stack of that item.
+//
+// Otherwise:
+// Put it into the first empty slot.
+//
+// Returns false if the inventory is completely full.
+    bool addItem(
+        ItemType itemType,
+        int amount = 1
+    );
+
 
     // --------------------------------------------------------
     // Inventory information
@@ -103,6 +121,19 @@ public:
     ItemType getItemTypeAtSlot(
         int slot
     ) const;
+
+    // Returns how many items are
+// stored in a specific slot.
+    int getAmountAtSlot(
+        int slot
+    ) const;
+
+    // Returns the ItemType currently
+// selected by the player.
+//
+// Used to decide what the selected
+// item is allowed to do.
+    ItemType getSelectedItemType() const;
 
     // Returns the currently selected slot number.
     //

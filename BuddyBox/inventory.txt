@@ -1,6 +1,0 @@
-0 Leaf
-1 Dirt
-2 Wood
-3 Leaf
-4 Stick
-5 Stick

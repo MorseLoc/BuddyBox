@@ -1,6 +1,6 @@
 #include "Block.h"
 #include "NPC.h"
-
+#include "Item.h"
 
 
 
@@ -55,6 +55,10 @@ Block::Block(BlockType blockType)
     // Spawner blocks count toward 60 seconds.
     jebubSpawnTimer = 0.0f;
 
+    // Blocks drop nothing unless their
+// specific BlockType says otherwise.
+    dropItem =
+        ItemType::None;
 
     // --------------------------------------------------------
     // Block-specific properties
@@ -66,6 +70,9 @@ Block::Block(BlockType blockType)
         textureRow = 0;
 
         durability = 3.0f;
+
+        dropItem =
+            ItemType::GrassBlock;
     }
     else if (type == BlockType::Spawner)
     {
@@ -84,6 +91,9 @@ Block::Block(BlockType blockType)
         textureRow = 2;
 
         durability = 3.0f;
+
+        dropItem =
+            ItemType::DirtBlock;
     }
     else if (type == BlockType::Wood)
     {
@@ -97,6 +107,10 @@ Block::Block(BlockType blockType)
     {
         // Leaf uses row 4 of the texture atlas.
         textureRow = 4;
+
+        // Leaves drop a stick when broken.
+        dropItem =
+            ItemType::Stick;
     }
     else if (type == BlockType::Stone)
     {

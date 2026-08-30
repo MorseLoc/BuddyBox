@@ -35,9 +35,21 @@ public:
         unsigned int texture,
         int row,
         int rows,
-        float yaw = 0.0f
+        float yaw = 0.0f,
+        bool useItemAtlas = false
     );
 
+    // Draws a flat dropped-item sprite.
+//
+// Uses Itemdex instead of the normal
+// six-column block texture atlas.
+    void drawDroppedItem(
+        const glm::vec3& position,
+        unsigned int texture,
+        int row,
+        int rows,
+        float yaw
+    );
 
     unsigned int getShaderProgram() const;
 

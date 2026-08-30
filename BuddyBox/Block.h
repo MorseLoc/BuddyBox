@@ -5,6 +5,12 @@
 
 class NPC;
 
+// ItemType is defined in Item.h.
+//
+// We forward-declare it here so Block
+// can remember which item it drops
+// without creating a circular include.
+enum class ItemType;
 
 // ============================================================
 // Block types
@@ -67,6 +73,12 @@ struct Block
 // 2.0f = twice as long
 // 0.5f = half as long
     float durability;
+
+    // The item this block drops when broken.
+//
+// ItemType::None means the block
+// does not drop anything.
+    ItemType dropItem;
 
 
     // --------------------------------------------------------

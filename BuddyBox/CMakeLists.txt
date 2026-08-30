@@ -36,6 +36,7 @@ add_executable(BuddyBox
     "ChunkMesh.cpp"
     "Item.cpp"
     "Item.h"
+    "DroppedItem.h"
 )
 
 configure_file(

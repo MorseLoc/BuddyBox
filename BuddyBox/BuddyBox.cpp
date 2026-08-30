@@ -28,6 +28,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <cmath>
 
 
 // STB_IMAGE_IMPLEMENTATION must exist in exactly one .cpp file.
@@ -46,7 +47,7 @@
 #include "NPC.h"
 #include "NPCRenderer.h"
 #include "ChunkMesh.h"
-
+#include "DroppedItem.h"
 
 // ============================================================
 // Mouse wheel input
@@ -173,6 +174,9 @@ int main()
 
 	Inventory inventory;
 
+	// All item entities currently
+// existing in the world.
+	std::vector<DroppedItem> droppedItems;
 
 	// Stores every NPC currently alive.
 	std::vector<NPC> npcs;
@@ -519,6 +523,14 @@ int main()
 			"textures/ScrollWheel.png"
 		);
 
+	// Number sprite sheet.
+//
+// Contains digits 0 - 9 in one horizontal row.
+	unsigned int numberAtlasTexture =
+		textureManager.loadTexture(
+			"textures/Numberdex.png"
+		);
+
 
 	unsigned int npcAtlasTexture =
 		textureManager.loadTexture(
@@ -741,6 +753,147 @@ int main()
 			);
 		}
 
+		// ----------------------------------------------------
+		// Dropped item gravity + floor collision
+		// ----------------------------------------------------
+
+		for (DroppedItem& droppedItem : droppedItems)
+		{
+			const float gravity =
+				-23.0f;
+
+
+			// Apply gravity.
+			droppedItem.verticalVelocity +=
+				gravity * deltaTime;
+
+
+			// Work out where the item wants to move.
+			float nextY =
+				droppedItem.position.y +
+				droppedItem.verticalVelocity * deltaTime;
+
+
+			// ------------------------------------------------
+			// Find the block directly under the item
+			// ------------------------------------------------
+
+			int blockX =
+				static_cast<int>(
+					std::floor(
+						droppedItem.position.x + 0.5f
+					)
+					);
+
+
+			int blockZ =
+				static_cast<int>(
+					std::floor(
+						droppedItem.position.z + 0.5f
+					)
+					);
+
+
+			// Dropped sprite is 0.5 blocks tall,
+			// so its bottom is 0.25 below its center.
+			float nextBottom =
+				nextY - 0.25f;
+
+
+			int blockY =
+				static_cast<int>(
+					std::floor(
+						nextBottom + 0.5f
+					)
+					);
+
+
+			// ------------------------------------------------
+			// Collision
+			// ------------------------------------------------
+
+			if (
+				droppedItem.verticalVelocity < 0.0f &&
+				world.isSolidAt(
+					blockX,
+					blockY,
+					blockZ
+				)
+				)
+			{
+				// Top of a block is blockY + 0.5.
+				//
+				// Item center sits another 0.25 above that.
+				droppedItem.position.y =
+					static_cast<float>(blockY) +
+					0.75f;
+
+
+				droppedItem.verticalVelocity =
+					0.0f;
+			}
+			else
+			{
+				droppedItem.position.y =
+					nextY;
+			}
+		}
+
+		// ----------------------------------------------------
+// Dropped item pickup
+// ----------------------------------------------------
+//
+// If the player gets close enough to a dropped item,
+// try to add it to the inventory.
+//
+// If the inventory accepts it,
+// remove the dropped item from the world.
+
+		for (
+			int i = 0;
+			i < static_cast<int>(droppedItems.size());
+			)
+		{
+			float distanceToPlayer =
+				glm::length(
+					droppedItems[i].position -
+					player.position
+				);
+
+
+			// Player is close enough to pick it up.
+			if (
+				distanceToPlayer <
+				2.0f
+				)
+			{
+				bool itemWasAdded =
+					inventory.addItem(
+						droppedItems[i].type
+					);
+
+
+				// Only delete the world item if
+				// the inventory actually accepted it.
+				if (itemWasAdded)
+				{
+					droppedItems.erase(
+						droppedItems.begin() + i
+					);
+
+
+					// Do NOT increase i here.
+					//
+					// The next item has moved into
+					// this same vector position.
+					continue;
+				}
+			}
+
+
+			++i;
+		}
+
 
 		// ----------------------------------------------------
 		// Mouse input
@@ -905,6 +1058,28 @@ int main()
 						requiredBreakTime
 						)
 					{
+
+						// ------------------------------------------------
+// Create the block's dropped item
+// ------------------------------------------------
+
+// Only create an item if this block
+// actually has something to drop.
+						if (
+							block.dropItem !=
+							ItemType::None
+							)
+						{
+							droppedItems.emplace_back(
+								block.dropItem,
+								glm::vec3(
+									static_cast<float>(hitX),
+									static_cast<float>(hitY),
+									static_cast<float>(hitZ)
+								)
+							);
+						}
+
 						world.removeBlock(
 							hitX,
 							hitY,
@@ -1001,63 +1176,78 @@ int main()
 				previousZ
 			))
 			{
-				Block block(
-					inventory.getSelectedBlockType()
+				// Find the item the player currently has selected.
+				Item selectedItem(
+					inventory.getSelectedItemType()
 				);
 
 
-				glm::vec3 playerMin =
-					player.position -
-					(player.size / 2.0f);
-
-
-				glm::vec3 playerMax =
-					player.position +
-					(player.size / 2.0f);
-
-
-				glm::vec3 blockMin(
-					previousX - 0.5f,
-					previousY - 0.5f,
-					previousZ - 0.5f
-				);
-
-
-				glm::vec3 blockMax(
-					previousX + 0.5f,
-					previousY + 0.5f,
-					previousZ + 0.5f
-				);
-
-
-				bool overlapsPlayer =
-					playerMax.x > blockMin.x &&
-					playerMin.x < blockMax.x &&
-
-					playerMax.y > blockMin.y &&
-					playerMin.y < blockMax.y &&
-
-					playerMax.z > blockMin.z &&
-					playerMin.z < blockMax.z;
-
-
-				if (!overlapsPlayer)
+				// Only items with the PlaceBlock feature
+				// are allowed to create blocks.
+				if (
+					selectedItem.feature ==
+					ItemFeature::PlaceBlock
+					)
 				{
-					world.placeBlock(
-						previousX,
-						previousY,
-						previousZ,
-						block
+					Block block(
+						selectedItem.placedBlockType
 					);
 
 
-					rebuildChunksAroundBlock(
-						previousX,
-						previousY,
-						previousZ
+					glm::vec3 playerMin =
+						player.position -
+						(player.size / 2.0f);
+
+
+					glm::vec3 playerMax =
+						player.position +
+						(player.size / 2.0f);
+
+
+					glm::vec3 blockMin(
+						previousX - 0.5f,
+						previousY - 0.5f,
+						previousZ - 0.5f
 					);
+
+
+					glm::vec3 blockMax(
+						previousX + 0.5f,
+						previousY + 0.5f,
+						previousZ + 0.5f
+					);
+
+
+					bool overlapsPlayer =
+						playerMax.x > blockMin.x &&
+						playerMin.x < blockMax.x &&
+
+						playerMax.y > blockMin.y &&
+						playerMin.y < blockMax.y &&
+
+						playerMax.z > blockMin.z &&
+						playerMin.z < blockMax.z;
+
+
+					if (!overlapsPlayer)
+					{
+						world.placeBlock(
+							previousX,
+							previousY,
+							previousZ,
+							block
+						);
+
+
+						rebuildChunksAroundBlock(
+							previousX,
+							previousY,
+							previousZ
+						);
+					}
 				}
 			}
+
 		}
 
 
@@ -1346,6 +1536,68 @@ int main()
 			);
 		}
 
+		// ----------------------------------------------------
+// Draw dropped items
+// ----------------------------------------------------
+
+		for (const DroppedItem& droppedItem : droppedItems)
+		{
+			// Get the permanent properties of this item,
+			// including which Itemdex row it uses.
+			Item item(
+				droppedItem.type
+			);
+
+
+			// ----------------------------------------------------
+// Draw dropped items
+// ----------------------------------------------------
+
+			for (const DroppedItem& droppedItem : droppedItems)
+			{
+				// Get this item's permanent information,
+				// including its Itemdex texture row.
+				Item item(
+					droppedItem.type
+				);
+
+
+				// ------------------------------------------------
+				// Find the direction from the item to the camera
+				// ------------------------------------------------
+
+				glm::vec3 directionToCamera =
+					camera.getPosition() -
+					droppedItem.position;
+
+
+				// We only care about horizontal rotation.
+				//
+				// atan2 converts the X/Z direction into
+				// an angle around the Y axis.
+				float itemYaw =
+					glm::degrees(
+						std::atan2(
+							directionToCamera.x,
+							directionToCamera.z
+						)
+					);
+
+
+				// ------------------------------------------------
+				// Draw the flat sprite
+				// ------------------------------------------------
+
+				renderer.drawDroppedItem(
+					droppedItem.position,
+					itemAtlasTexture,
+					item.textureRow,
+					6,
+					itemYaw
+				);
+			}
+		}
+
 
 		// ----------------------------------------------------
 		// Draw UI
@@ -1354,6 +1606,7 @@ int main()
 		uiRenderer.drawHotbar(
 			scrollWheelTexture,
 			itemAtlasTexture,
+			numberAtlasTexture,
 			inventory.getSelectedSlot(),
 			inventory,
 			6

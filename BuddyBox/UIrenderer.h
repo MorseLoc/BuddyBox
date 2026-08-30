@@ -68,6 +68,7 @@ public:
     void drawHotbar(
         unsigned int hotbarTexture,
         unsigned int itemAtlasTexture,
+        unsigned int numberAtlasTexture,
         int selectedSlot,
         const Inventory& inventory,
         int itemAtlasRows

@@ -189,6 +189,12 @@ bool UIRenderer::initialize()
         uniform float textureRow;
         uniform float atlasRows;
 
+// Numberdex information.
+//
+// Numberdex contains digits 0 - 9
+// arranged horizontally.
+uniform float numberDigit;
+
         void main()
         {
             // -----------------------------------------------
@@ -254,6 +260,33 @@ bool UIRenderer::initialize()
                         1.0
                     );
             }
+
+// -----------------------------------------------
+// Mode 3: inventory number
+// -----------------------------------------------
+
+else if (drawMode == 3)
+{
+    float digitWidth =
+        1.0 / 10.0;
+
+    float digitStart =
+        numberDigit *
+        digitWidth;
+
+    float numberU =
+        digitStart +
+        uv.x * digitWidth;
+
+    finalColor =
+        texture(
+            uiTexture,
+            vec2(
+                numberU,
+                uv.y
+            )
+        );
+}
         }
     )";
 
@@ -352,6 +385,7 @@ bool UIRenderer::initialize()
 void UIRenderer::drawHotbar(
     unsigned int hotbarTexture,
     unsigned int itemAtlasTexture,
+    unsigned int numberAtlasTexture,
     int selectedSlot,
     const Inventory& inventory,
     int itemAtlasRows
@@ -430,6 +464,13 @@ void UIRenderer::drawHotbar(
         glGetUniformLocation(
             shaderProgram,
             "textureRow"
+        );
+
+    // Numberdex digit selector.
+    int numberDigitLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "numberDigit"
         );
 
 
@@ -548,6 +589,15 @@ void UIRenderer::drawHotbar(
                 slot
             );
 
+        // Empty slots have no icon to draw.
+        if (
+            itemType ==
+            ItemType::None
+            )
+        {
+            continue;
+        }
+
 
         // Create a temporary item so we can use
         // its Itemdex texture-row information.
@@ -577,6 +627,92 @@ void UIRenderer::drawHotbar(
             positionLocation,
             slotX,
             -0.85f
+        );
+
+
+        glDrawArrays(
+            GL_TRIANGLES,
+            0,
+            6
+        );
+    }
+
+    // ========================================================
+// Draw item amounts
+// ========================================================
+
+// Switch to number drawing mode.
+    glUniform1i(
+        drawModeLocation,
+        3
+    );
+
+
+    // Numbers come from Numberdex.png.
+    glBindTexture(
+        GL_TEXTURE_2D,
+        numberAtlasTexture
+    );
+
+
+    // Draw one number for each hotbar slot.
+    for (int slot = 0; slot < 6; slot++)
+    {
+        int amount =
+            inventory.getAmountAtSlot(
+                slot
+            );
+
+
+        // Don't draw a number for empty slots
+        // or single items.
+        if (
+            amount <= 1
+            )
+        {
+            continue;
+        }
+
+
+        // For this first test, only draw
+        // single-digit amounts.
+        if (
+            amount > 9
+            )
+        {
+            continue;
+        }
+
+
+        glUniform1f(
+            numberDigitLocation,
+            static_cast<float>(
+                amount
+                )
+        );
+
+
+        float slotX =
+            -0.375f +
+            (
+                static_cast<float>(slot)
+                * 0.15f
+                );
+
+
+        // Small 3 x 5 number.
+        glUniform2f(
+            scaleLocation,
+            0.018f,
+            0.030f
+        );
+
+
+        // Bottom-right corner of the slot.
+        glUniform2f(
+            positionLocation,
+            slotX + 0.040f,
+            -0.885f
         );
 
 
