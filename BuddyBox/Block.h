@@ -59,6 +59,15 @@ struct Block
     // false = player can move through this block.
     bool solid;
 
+    // How long this block takes to break compared to
+// the player's break speed.
+//
+// Example:
+// 1.0f = normal
+// 2.0f = twice as long
+// 0.5f = half as long
+    float durability;
+
 
     // --------------------------------------------------------
     // Spawner properties

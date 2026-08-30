@@ -41,6 +41,11 @@ Block::Block(BlockType blockType)
     // This means the player cannot walk through them.
     solid = true;
 
+    // Default block durability.
+// A durability of 1.0f will eventually mean
+// 1 second with the player's normal break speed.
+    durability = 1.0f;
+
 
     // Most blocks do not spawn Jebubs.
     spawnsJebub = false;
@@ -59,6 +64,8 @@ Block::Block(BlockType blockType)
     {
         // Grass uses row 0 of the texture atlas.
         textureRow = 0;
+
+        durability = 3.0f;
     }
     else if (type == BlockType::Spawner)
     {
@@ -68,17 +75,24 @@ Block::Block(BlockType blockType)
         // Spawners are the only current blocks
         // that are allowed to create Jebubs.
         spawnsJebub = true;
+
+        durability = 999.0f;
     }
     else if (type == BlockType::Dirt)
     {
         // Dirt uses row 2 of the texture atlas.
         textureRow = 2;
+
+        durability = 3.0f;
     }
     else if (type == BlockType::Wood)
     {
         // Wood uses row 3 of the texture atlas.
         textureRow = 3;
+
+        durability = 5.0f;
     }
+
     else if (type == BlockType::Leaf)
     {
         // Leaf uses row 4 of the texture atlas.
@@ -88,6 +102,8 @@ Block::Block(BlockType blockType)
     {
         // Stone uses row 5 of the texture atlas.
         textureRow = 5;
+
+        durability = 20.0f;
     }
 }
 

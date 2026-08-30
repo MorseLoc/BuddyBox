@@ -57,6 +57,12 @@ struct Player
     // Measured in world units per second.
     float speed;
 
+    // Base time used when breaking blocks.
+//
+// 1.0f means each point of block durability
+// takes one second to break.
+    float breakSpeed;
+
 
     // Current movement speed on the Y axis.
     //

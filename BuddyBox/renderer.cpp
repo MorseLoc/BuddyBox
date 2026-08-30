@@ -375,6 +375,8 @@ Renderer::Renderer()
 
         "uniform vec3 solidColor;\n"
 
+        "uniform float opacity;\n"
+
 
         "void main()\n"
         "{\n"
@@ -383,7 +385,7 @@ Renderer::Renderer()
         "    if (useSolidColor)\n"
         "    {\n"
 
-        "        finalColor = vec4(solidColor, 1.0);\n"
+        "        finalColor = vec4(solidColor, opacity);\n"
 
         "    }\n"
         "    else\n"
@@ -482,7 +484,8 @@ void Renderer::drawColoredCube(
     const glm::vec3& position,
     const glm::vec3& size,
     const glm::vec3& color,
-    float yaw
+    float yaw,
+    float opacity
 )
 {
     glUseProgram(
@@ -538,7 +541,21 @@ void Renderer::drawColoredCube(
         color.b
     );
 
+    // --------------------------------------------------------
+// Opacity
+// --------------------------------------------------------
 
+    int opacityLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "opacity"
+        );
+
+
+    glUniform1f(
+        opacityLocation,
+        opacity
+    );
     // ========================================================
     // Model matrix
     // ========================================================

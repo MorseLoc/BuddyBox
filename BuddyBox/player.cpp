@@ -38,6 +38,11 @@ Player::Player()
     speed = 6.0f;
 
 
+    // Base block breaking speed.
+    // 1.0f = one second per durability point.
+    breakSpeed = 1.0f;
+
+
     // The player begins with no upward or downward movement.
     verticalVelocity = 0.0f;
 
