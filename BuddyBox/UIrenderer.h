@@ -67,10 +67,10 @@ public:
     //     Number of block texture rows in the atlas.
     void drawHotbar(
         unsigned int hotbarTexture,
-        unsigned int blockAtlasTexture,
+        unsigned int itemAtlasTexture,
         int selectedSlot,
         const Inventory& inventory,
-        int atlasRows
+        int itemAtlasRows
     );
 
 

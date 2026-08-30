@@ -34,6 +34,8 @@ add_executable(BuddyBox
     "NPCrenderer.h"
     "ChunkMesh.h"
     "ChunkMesh.cpp"
+    "Item.cpp"
+    "Item.h"
 )
 
 configure_file(
@@ -65,6 +67,12 @@ configure_file(
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/textures/NPCdex.png"
     "${CMAKE_CURRENT_BINARY_DIR}/textures/NPCdex.png"
+    COPYONLY
+)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/textures/Itemdex.png"
+    "${CMAKE_CURRENT_BINARY_DIR}/textures/Itemdex.png"
     COPYONLY
 )
 

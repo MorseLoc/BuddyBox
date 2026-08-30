@@ -505,6 +505,10 @@ int main()
 			<< "Failed to load artdex.png\n";
 	}
 
+	unsigned int itemAtlasTexture =
+		textureManager.loadTexture(
+			"textures/Itemdex.png"
+		);
 
 	unsigned int blockAtlasTexture =
 		textureManager.getAtlasTexture();
@@ -1349,10 +1353,10 @@ int main()
 
 		uiRenderer.drawHotbar(
 			scrollWheelTexture,
-			blockAtlasTexture,
+			itemAtlasTexture,
 			inventory.getSelectedSlot(),
 			inventory,
-			textureManager.getBlockCount()
+			6
 		);
 
 

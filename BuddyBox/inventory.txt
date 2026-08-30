@@ -1,6 +1,6 @@
-0 Grass
-1 Spawner
-2 Dirt
-3 Wood
-4 Leaf
-5 Stone
+0 Leaf
+1 Dirt
+2 Wood
+3 Leaf
+4 Stick
+5 Stick

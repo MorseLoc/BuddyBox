@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Block.h"
+#include "Item.h"
 
 
 // ============================================================
@@ -20,6 +21,23 @@
 // - Cycling between slots
 // - Returning selected block information
 // ============================================================
+
+// ============================================================
+// Inventory slot
+//
+// One space in the player's inventory.
+//
+// Each slot remembers:
+// - What item is inside
+// - How many of that item the player has
+// ============================================================
+
+struct InventorySlot
+{
+    ItemType item;
+
+    int amount;
+};
 
 class Inventory
 {
@@ -78,6 +96,13 @@ public:
         int slot
     ) const;
 
+    // Returns the ItemType stored
+// in a specific inventory slot.
+//
+// Used by the UI to draw item icons.
+    ItemType getItemTypeAtSlot(
+        int slot
+    ) const;
 
     // Returns the currently selected slot number.
     //
@@ -90,8 +115,9 @@ private:
     // Hotbar data
     // --------------------------------------------------------
 
-    // Stores the BlockType assigned to each hotbar slot.
-    std::vector<BlockType> slots;
+ // Stores the item and quantity
+// inside each inventory slot.
+    std::vector<InventorySlot> slots;
 
 
     // Index of the currently selected slot.

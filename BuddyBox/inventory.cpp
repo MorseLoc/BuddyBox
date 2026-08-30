@@ -13,12 +13,24 @@
 
 Inventory::Inventory()
 {
-    // BuddyBox currently has 6 hotbar slots.
+    // BuddyBox currently has 6 inventory slots.
     slots.resize(6);
 
 
+    // Every slot starts empty.
+    for (InventorySlot& slot : slots)
+    {
+        slot.item =
+            ItemType::None;
+
+        slot.amount =
+            0;
+    }
+
+
     // Slot numbers begin at 0.
-    selectedSlot = 0;
+    selectedSlot =
+        0;
 }
 
 
@@ -64,11 +76,11 @@ bool Inventory::loadFromFile(
 
 
     int slot;
-    std::string blockName;
+    std::string itemName;
 
 
-    // Read one hotbar slot at a time.
-    while (file >> slot >> blockName)
+    // Read one inventory slot at a time.
+    while (file >> slot >> itemName)
     {
         // Ignore invalid slot numbers.
         if (
@@ -80,37 +92,57 @@ bool Inventory::loadFromFile(
         }
 
 
-        // Convert the block's text name
-        // into a BlockType.
-        if (blockName == "Grass")
+        // --------------------------------------------------------
+        // Convert the text name into an ItemType.
+        // --------------------------------------------------------
+
+        if (itemName == "Grass")
         {
-            slots[slot] =
-                BlockType::Grass;
+            slots[slot].item =
+                ItemType::GrassBlock;
+
+            slots[slot].amount =
+                1;
         }
-        else if (blockName == "Spawner")
+        else if (itemName == "Dirt")
         {
-            slots[slot] =
-                BlockType::Spawner;
+            slots[slot].item =
+                ItemType::DirtBlock;
+
+            slots[slot].amount =
+                1;
         }
-        else if (blockName == "Dirt")
+        else if (itemName == "Wood")
         {
-            slots[slot] =
-                BlockType::Dirt;
+            slots[slot].item =
+                ItemType::WoodBlock;
+
+            slots[slot].amount =
+                1;
         }
-        else if (blockName == "Wood")
+        else if (itemName == "Leaf")
         {
-            slots[slot] =
-                BlockType::Wood;
+            slots[slot].item =
+                ItemType::LeafBlock;
+
+            slots[slot].amount =
+                1;
         }
-        else if (blockName == "Leaf")
+        else if (itemName == "Stone")
         {
-            slots[slot] =
-                BlockType::Leaf;
+            slots[slot].item =
+                ItemType::StoneBlock;
+
+            slots[slot].amount =
+                1;
         }
-        else if (blockName == "Stone")
+        else if (itemName == "Stick")
         {
-            slots[slot] =
-                BlockType::Stone;
+            slots[slot].item =
+                ItemType::Stick;
+
+            slots[slot].amount =
+                1;
         }
     }
 
@@ -168,25 +200,50 @@ void Inventory::cycleSlot(
 // Inventory information
 // ============================================================
 
-// Returns the BlockType currently selected by the player.
+// Returns the BlockType placed by the
+// currently selected inventory item.
 //
-// Used when placing blocks.
+// This keeps the old placement system working
+// while the inventory now stores ItemTypes.
 BlockType Inventory::getSelectedBlockType() const
 {
-    return slots[selectedSlot];
+    Item selectedItem(
+        slots[selectedSlot].item
+    );
+
+
+    return
+        selectedItem.placedBlockType;
 }
 
 
-// Returns the BlockType stored in a specific hotbar slot.
+// Returns the BlockType represented by
+// a specific inventory slot.
 //
-// Used by the UI when drawing each slot.
+// This temporarily keeps the current UI working.
+// Later the UI will draw directly from Itemdex.png.
 BlockType Inventory::getBlockTypeAtSlot(
     int slot
 ) const
 {
-    return slots[slot];
+    Item item(
+        slots[slot].item
+    );
+
+
+    return
+        item.placedBlockType;
 }
 
+// Returns the ItemType stored
+// in a specific inventory slot.
+ItemType Inventory::getItemTypeAtSlot(
+    int slot
+) const
+{
+    return
+        slots[slot].item;
+}
 
 // Returns the currently selected slot number.
 int Inventory::getSelectedSlot() const

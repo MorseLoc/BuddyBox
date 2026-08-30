@@ -220,8 +220,8 @@ bool UIRenderer::initialize()
                 // six cube faces horizontally.
                 //
                 // Face 1 is the front face.
-                float atlasU =
-                    (1.0 + uv.x) / 6.0;
+               float atlasU =
+                uv.x;
 
                 float atlasV =
                     (
@@ -351,10 +351,10 @@ bool UIRenderer::initialize()
 
 void UIRenderer::drawHotbar(
     unsigned int hotbarTexture,
-    unsigned int blockAtlasTexture,
+    unsigned int itemAtlasTexture,
     int selectedSlot,
     const Inventory& inventory,
-    int atlasRows
+    int itemAtlasRows
 )
 {
     glUseProgram(
@@ -518,16 +518,16 @@ void UIRenderer::drawHotbar(
     );
 
 
-    // Block icons come from the main block atlas.
+    // Item icons come from Itemdex.png.
     glBindTexture(
         GL_TEXTURE_2D,
-        blockAtlasTexture
+        itemAtlasTexture
     );
 
 
     glUniform1f(
         atlasRowsLocation,
-        static_cast<float>(atlasRows)
+        static_cast<float>(itemAtlasRows)
     );
 
 
@@ -542,24 +542,24 @@ void UIRenderer::drawHotbar(
     // Draw one icon for each current hotbar slot.
     for (int slot = 0; slot < 6; slot++)
     {
-        // Find which block belongs in this slot.
-        BlockType blockType =
-            inventory.getBlockTypeAtSlot(
+        // Find which item belongs in this slot.
+        ItemType itemType =
+            inventory.getItemTypeAtSlot(
                 slot
             );
 
 
-        // Create a temporary block so we can use
-        // its texture-row information.
-        Block block(
-            blockType
+        // Create a temporary item so we can use
+        // its Itemdex texture-row information.
+        Item item(
+            itemType
         );
 
 
         glUniform1f(
             textureRowLocation,
             static_cast<float>(
-                block.textureRow
+                item.textureRow
                 )
         );
 
