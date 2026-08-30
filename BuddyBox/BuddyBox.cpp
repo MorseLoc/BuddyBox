@@ -1238,6 +1238,9 @@ int main()
 							block
 						);
 
+						// Remove one item from the selected stack
+// because the block was successfully placed.
+						inventory.removeSelectedItem();
 
 						rebuildChunksAroundBlock(
 							previousX,

@@ -279,13 +279,13 @@ else if (drawMode == 3)
         uv.x * digitWidth;
 
     finalColor =
-        texture(
-            uiTexture,
-            vec2(
-                numberU,
-                uv.y
-            )
-        );
+    texture(
+        uiTexture,
+        vec2(
+            numberU,
+            1.0 - uv.y
+        )
+    );
 }
         }
     )";
@@ -655,7 +655,7 @@ void UIRenderer::drawHotbar(
     );
 
 
-    // Draw one number for each hotbar slot.
+    // Draw the amount for each hotbar slot.
     for (int slot = 0; slot < 6; slot++)
     {
         int amount =
@@ -674,24 +674,6 @@ void UIRenderer::drawHotbar(
         }
 
 
-        // For this first test, only draw
-        // single-digit amounts.
-        if (
-            amount > 9
-            )
-        {
-            continue;
-        }
-
-
-        glUniform1f(
-            numberDigitLocation,
-            static_cast<float>(
-                amount
-                )
-        );
-
-
         float slotX =
             -0.375f +
             (
@@ -708,19 +690,94 @@ void UIRenderer::drawHotbar(
         );
 
 
-        // Bottom-right corner of the slot.
-        glUniform2f(
-            positionLocation,
-            slotX + 0.040f,
-            -0.885f
-        );
+        // --------------------------------------------------------
+        // Amounts 2 - 9
+        // --------------------------------------------------------
+
+        if (
+            amount < 10
+            )
+        {
+            glUniform1f(
+                numberDigitLocation,
+                static_cast<float>(
+                    amount
+                    )
+            );
 
 
-        glDrawArrays(
-            GL_TRIANGLES,
-            0,
-            6
-        );
+            glUniform2f(
+                positionLocation,
+                slotX + 0.040f,
+                -0.885f
+            );
+
+
+            glDrawArrays(
+                GL_TRIANGLES,
+                0,
+                6
+            );
+        }
+
+        // --------------------------------------------------------
+        // Amounts 10 - 99
+        // --------------------------------------------------------
+
+        else
+        {
+            int tensDigit =
+                amount / 10;
+
+            int onesDigit =
+                amount % 10;
+
+
+            // Draw tens digit.
+            glUniform1f(
+                numberDigitLocation,
+                static_cast<float>(
+                    tensDigit
+                    )
+            );
+
+
+            glUniform2f(
+                positionLocation,
+                slotX + 0.018f,
+                -0.885f
+            );
+
+
+            glDrawArrays(
+                GL_TRIANGLES,
+                0,
+                6
+            );
+
+
+            // Draw ones digit.
+            glUniform1f(
+                numberDigitLocation,
+                static_cast<float>(
+                    onesDigit
+                    )
+            );
+
+
+            glUniform2f(
+                positionLocation,
+                slotX + 0.048f,
+                -0.885f
+            );
+
+
+            glDrawArrays(
+                GL_TRIANGLES,
+                0,
+                6
+            );
+        }
     }
 
 

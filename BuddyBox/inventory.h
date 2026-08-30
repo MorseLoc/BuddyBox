@@ -95,6 +95,12 @@ public:
         int amount = 1
     );
 
+    // Removes one item from the
+// currently selected hotbar slot.
+//
+// Returns false if the slot is empty.
+    bool removeSelectedItem();
+
 
     // --------------------------------------------------------
     // Inventory information

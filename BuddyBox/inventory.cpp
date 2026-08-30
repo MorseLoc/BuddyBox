@@ -8,13 +8,24 @@
 // ============================================================
 // Inventory constructor
 //
-// Creates the player's hotbar and selects the first slot.
+// Creates the player's inventory.
+//
+// Slots:
+// 0 - 5  = hotbar
+// 6 - 11 = inventory storage
 // ============================================================
 
 Inventory::Inventory()
 {
-    // BuddyBox currently has 6 inventory slots.
-    slots.resize(12);
+    // BuddyBox currently has:
+    //
+    // 6 hotbar slots
+    // 6 inventory slots
+    //
+    // 12 total.
+    slots.resize(
+        12
+    );
 
 
     // Every slot starts empty.
@@ -23,12 +34,13 @@ Inventory::Inventory()
         slot.item =
             ItemType::None;
 
+
         slot.amount =
             0;
     }
 
 
-    // Slot numbers begin at 0.
+    // Hotbar slot numbers begin at 0.
     selectedSlot =
         0;
 }
@@ -37,21 +49,17 @@ Inventory::Inventory()
 // ============================================================
 // Load inventory
 //
-// Loads hotbar contents from a text file.
+// Loads inventory contents from inventory.txt.
 //
 // Expected format:
 //
-// SlotNumber BlockType
+// SlotNumber ItemName
 //
 // Example:
 //
 // 0 Grass
 // 1 Dirt
 // 2 Stone
-//
-// Returns:
-// true  = file opened successfully
-// false = file could not be opened
 // ============================================================
 
 bool Inventory::loadFromFile(
@@ -76,16 +84,24 @@ bool Inventory::loadFromFile(
 
 
     int slot;
+
     std::string itemName;
 
 
-    // Read one inventory slot at a time.
-    while (file >> slot >> itemName)
+    // Read one inventory entry at a time.
+    while (
+        file >>
+        slot >>
+        itemName
+        )
     {
         // Ignore invalid slot numbers.
         if (
             slot < 0 ||
-            slot >= static_cast<int>(slots.size())
+            slot >=
+            static_cast<int>(
+                slots.size()
+                )
             )
         {
             continue;
@@ -93,53 +109,82 @@ bool Inventory::loadFromFile(
 
 
         // --------------------------------------------------------
-        // Convert the text name into an ItemType.
+        // Convert text item names into ItemTypes
         // --------------------------------------------------------
 
-        if (itemName == "Grass")
+        if (
+            itemName ==
+            "Grass"
+            )
         {
             slots[slot].item =
                 ItemType::GrassBlock;
 
+
             slots[slot].amount =
                 1;
         }
-        else if (itemName == "Dirt")
+
+        else if (
+            itemName ==
+            "Dirt"
+            )
         {
             slots[slot].item =
                 ItemType::DirtBlock;
 
+
             slots[slot].amount =
                 1;
         }
-        else if (itemName == "Wood")
+
+        else if (
+            itemName ==
+            "Wood"
+            )
         {
             slots[slot].item =
                 ItemType::WoodBlock;
 
+
             slots[slot].amount =
                 1;
         }
-        else if (itemName == "Leaf")
+
+        else if (
+            itemName ==
+            "Leaf"
+            )
         {
             slots[slot].item =
                 ItemType::LeafBlock;
 
-            slots[slot].amount =
-                1;
-        }
-        else if (itemName == "Stone")
-        {
-            slots[slot].item =
-                ItemType::StoneBlock;
 
             slots[slot].amount =
                 1;
         }
-        else if (itemName == "Stick")
+
+        else if (
+            itemName ==
+            "Stone"
+            )
+        {
+            slots[slot].item =
+                ItemType::StoneBlock;
+
+
+            slots[slot].amount =
+                1;
+        }
+
+        else if (
+            itemName ==
+            "Stick"
+            )
         {
             slots[slot].item =
                 ItemType::Stick;
+
 
             slots[slot].amount =
                 1;
@@ -158,13 +203,15 @@ bool Inventory::loadFromFile(
 // ============================================================
 // Cycle selected slot
 //
-// Moves the selected hotbar slot left or right.
+// Moves the selected hotbar slot.
 //
 // direction:
-//  1 = move forward
-// -1 = move backward
 //
-// The selection wraps around when it reaches either end.
+//  1 = next slot
+// -1 = previous slot
+//
+// Only slots 0 - 5 are selectable
+// using the mouse wheel.
 // ============================================================
 
 void Inventory::cycleSlot(
@@ -175,44 +222,58 @@ void Inventory::cycleSlot(
         direction;
 
 
-    // Went past the final slot.
-    // Wrap around to the beginning.
-    // The hotbar is always slots 0 - 5.
-//
-// Slots 6 - 11 belong to the inventory
-// and should not be selected by the mouse wheel.
+    // Went past slot 5.
     if (
         selectedSlot >=
         6
         )
     {
-        selectedSlot = 0;
+        selectedSlot =
+            0;
     }
 
 
     // Went before slot 0.
-    // Wrap around to the final slot.
-    if (selectedSlot < 0)
+    if (
+        selectedSlot <
+        0
+        )
     {
         selectedSlot =
             5;
     }
 }
 
+
 // ============================================================
 // Add item
 //
-// Adds an item to the player's inventory.
+// Adds items to the inventory.
+//
+// Maximum stack size:
+// 99
 //
 // First:
-// Try to find an existing stack.
+// Fill existing stacks.
 //
-// Otherwise:
-// Use the first empty slot.
+// Then:
+// Create new stacks in empty slots.
+//
+// Example:
+//
+// Existing:
+//
+// Stick x99
+//
+// Add 1 stick:
+//
+// Stick x99
+// Stick x1
 //
 // Returns:
-// true  = item was added
-// false = inventory is full
+//
+// true  = all items were added
+// false = there was not enough inventory space
 // ============================================================
 
 bool Inventory::addItem(
@@ -220,29 +281,134 @@ bool Inventory::addItem(
     int amount
 )
 {
+    const int maxStackSize =
+        99;
+
+
     // --------------------------------------------------------
-    // First, look for an existing stack
+    // Reject invalid additions
     // --------------------------------------------------------
 
-    for (InventorySlot& slot : slots)
+    if (
+        itemType ==
+        ItemType::None ||
+        amount <=
+        0
+        )
     {
+        return false;
+    }
+
+
+    // ========================================================
+    // Check whether the ENTIRE amount can fit
+    // ========================================================
+
+    int availableSpace =
+        0;
+
+
+    for (const InventorySlot& slot : slots)
+    {
+        // Existing stack of the same item.
         if (
             slot.item ==
             itemType
             )
         {
-            slot.amount +=
-                amount;
+            availableSpace +=
+                maxStackSize -
+                slot.amount;
+        }
 
-
-            return true;
+        // Empty slot can hold a fresh stack.
+        else if (
+            slot.item ==
+            ItemType::None
+            )
+        {
+            availableSpace +=
+                maxStackSize;
         }
     }
 
 
-    // --------------------------------------------------------
-    // Otherwise, find an empty slot
-    // --------------------------------------------------------
+    // Don't partially pick something up.
+    //
+    // Either the whole amount fits,
+    // or nothing is changed.
+    if (
+        availableSpace <
+        amount
+        )
+    {
+        return false;
+    }
+
+
+    int remainingAmount =
+        amount;
+
+
+    // ========================================================
+    // Fill existing stacks first
+    // ========================================================
+
+    for (InventorySlot& slot : slots)
+    {
+        if (
+            slot.item ==
+            itemType &&
+            slot.amount <
+            maxStackSize
+            )
+        {
+            int spaceInStack =
+                maxStackSize -
+                slot.amount;
+
+
+            int amountToAdd;
+
+
+            if (
+                remainingAmount <
+                spaceInStack
+                )
+            {
+                amountToAdd =
+                    remainingAmount;
+            }
+            else
+            {
+                amountToAdd =
+                    spaceInStack;
+            }
+
+
+            slot.amount +=
+                amountToAdd;
+
+
+            remainingAmount -=
+                amountToAdd;
+
+
+            // Everything has been added.
+            if (
+                remainingAmount ==
+                0
+                )
+            {
+                return true;
+            }
+        }
+    }
+
+
+    // ========================================================
+    // Create new stacks
+    // ========================================================
 
     for (InventorySlot& slot : slots)
     {
@@ -251,32 +417,131 @@ bool Inventory::addItem(
             ItemType::None
             )
         {
+            int amountToAdd;
+
+
+            if (
+                remainingAmount <
+                maxStackSize
+                )
+            {
+                amountToAdd =
+                    remainingAmount;
+            }
+            else
+            {
+                amountToAdd =
+                    maxStackSize;
+            }
+
+
             slot.item =
                 itemType;
 
 
             slot.amount =
-                amount;
+                amountToAdd;
 
 
-            return true;
+            remainingAmount -=
+                amountToAdd;
+
+
+            // Everything has been added.
+            if (
+                remainingAmount ==
+                0
+                )
+            {
+                return true;
+            }
         }
     }
 
 
-    // No existing stack and no empty slots.
+    // This should normally never happen
+    // because we checked available space first.
     return false;
 }
+
+
+// ============================================================
+// Remove selected item
+//
+// Removes ONE item from the currently selected
+// hotbar slot.
+//
+// Used after successfully placing a block.
+//
+// Example:
+//
+// Dirt x3
+//
+// Place block:
+//
+// Dirt x2
+//
+// When the amount reaches zero,
+// the slot becomes completely empty.
+// ============================================================
+
+bool Inventory::removeSelectedItem()
+{
+    InventorySlot& slot =
+        slots[selectedSlot];
+
+
+    // Nothing exists in this slot.
+    if (
+        slot.item ==
+        ItemType::None ||
+        slot.amount <=
+        0
+        )
+    {
+        return false;
+    }
+
+
+    // Remove one item.
+    slot.amount -=
+        1;
+
+
+    // --------------------------------------------------------
+    // Stack became empty
+    // --------------------------------------------------------
+
+    if (
+        slot.amount <=
+        0
+        )
+    {
+        slot.amount =
+            0;
+
+
+        slot.item =
+            ItemType::None;
+    }
+
+
+    return true;
+}
+
 
 // ============================================================
 // Inventory information
 // ============================================================
 
-// Returns the BlockType placed by the
-// currently selected inventory item.
+
+// ------------------------------------------------------------
+// Get selected block type
 //
-// This keeps the old placement system working
-// while the inventory now stores ItemTypes.
+// Returns the block created by
+// the currently selected item.
+// ------------------------------------------------------------
+
 BlockType Inventory::getSelectedBlockType() const
 {
     Item selectedItem(
@@ -289,11 +554,13 @@ BlockType Inventory::getSelectedBlockType() const
 }
 
 
-// Returns the BlockType represented by
-// a specific inventory slot.
+// ------------------------------------------------------------
+// Get block type at slot
 //
-// This temporarily keeps the current UI working.
-// Later the UI will draw directly from Itemdex.png.
+// Returns the block represented by
+// the item inside a specific slot.
+// ------------------------------------------------------------
+
 BlockType Inventory::getBlockTypeAtSlot(
     int slot
 ) const
@@ -307,8 +574,11 @@ BlockType Inventory::getBlockTypeAtSlot(
         item.placedBlockType;
 }
 
-// Returns the ItemType stored
-// in a specific inventory slot.
+
+// ------------------------------------------------------------
+// Get item type at slot
+// ------------------------------------------------------------
+
 ItemType Inventory::getItemTypeAtSlot(
     int slot
 ) const
@@ -317,8 +587,11 @@ ItemType Inventory::getItemTypeAtSlot(
         slots[slot].item;
 }
 
-// Returns the number of items
-// stored in a specific slot.
+
+// ------------------------------------------------------------
+// Get amount at slot
+// ------------------------------------------------------------
+
 int Inventory::getAmountAtSlot(
     int slot
 ) const
@@ -327,16 +600,24 @@ int Inventory::getAmountAtSlot(
         slots[slot].amount;
 }
 
-// Returns the currently selected slot number.
-int Inventory::getSelectedSlot() const
-{
-    return selectedSlot;
-}
 
-// Returns the ItemType currently
-// selected by the player.
+// ------------------------------------------------------------
+// Get selected item type
+// ------------------------------------------------------------
+
 ItemType Inventory::getSelectedItemType() const
 {
     return
         slots[selectedSlot].item;
+}
+
+
+// ------------------------------------------------------------
+// Get selected slot
+// ------------------------------------------------------------
+
+int Inventory::getSelectedSlot() const
+{
+    return
+        selectedSlot;
 }
