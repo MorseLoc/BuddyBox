@@ -1,6 +1,7 @@
 #include "ChunkMesh.h"
 
 #include "World.h"
+#include "lighting.h"
 
 #include <glad/glad.h>
 
@@ -59,10 +60,19 @@ ChunkMesh::~ChunkMesh()
 
 // ============================================================
 // Build chunk
+//
+// Builds all visible block faces inside this chunk.
+//
+// Each visible face also receives the block's
+// current sky light level.
+//
+// The light level is stored directly inside
+// the chunk mesh so the shader can use it later.
 // ============================================================
 
 void ChunkMesh::build(
     const World& world,
+    const Lighting& lighting,
     int chunkX,
     int chunkY,
     int chunkZ
@@ -83,7 +93,8 @@ void ChunkMesh::build(
         chunkZ * CHUNK_SIZE;
 
 
-    // Check every possible block position inside the chunk.
+    // Check every possible block position
+    // inside the chunk.
 
     for (
         int x = startX;
@@ -114,6 +125,7 @@ void ChunkMesh::build(
 
 
                 // No block here.
+
                 if (
                     blockIterator ==
                     world.blocks.end()
@@ -127,8 +139,40 @@ void ChunkMesh::build(
                     blockIterator->second;
 
 
+                // ------------------------------------------------
+                // Get this block's current sky light
+                // ------------------------------------------------
+                //
+                // For our first lighting version:
+                //
+                // 15 = exposed to sky
+                // 0  = covered
+                //
+                // Later this will also contain the
+                // propagated values:
+                //
+                // 14, 13, 12, etc.
+                // ------------------------------------------------
+
+                int lightLevel =
+                    lighting.getSkyLight(
+                        x,
+                        y,
+                        z
+                    );
+
+
+                // ------------------------------------------------
                 // Front
-                if (!world.isSolidAt(x, y, z + 1))
+                // ------------------------------------------------
+
+                if (
+                    !world.isSolidAt(
+                        x,
+                        y,
+                        z + 1
+                    )
+                    )
                 {
                     addFace(
                         vertices,
@@ -136,13 +180,23 @@ void ChunkMesh::build(
                         y,
                         z,
                         1,
-                        block.textureRow
+                        block.textureRow,
+                        lightLevel
                     );
                 }
 
 
+                // ------------------------------------------------
                 // Back
-                if (!world.isSolidAt(x, y, z - 1))
+                // ------------------------------------------------
+
+                if (
+                    !world.isSolidAt(
+                        x,
+                        y,
+                        z - 1
+                    )
+                    )
                 {
                     addFace(
                         vertices,
@@ -150,13 +204,23 @@ void ChunkMesh::build(
                         y,
                         z,
                         2,
-                        block.textureRow
+                        block.textureRow,
+                        lightLevel
                     );
                 }
 
 
+                // ------------------------------------------------
                 // Left
-                if (!world.isSolidAt(x - 1, y, z))
+                // ------------------------------------------------
+
+                if (
+                    !world.isSolidAt(
+                        x - 1,
+                        y,
+                        z
+                    )
+                    )
                 {
                     addFace(
                         vertices,
@@ -164,13 +228,23 @@ void ChunkMesh::build(
                         y,
                         z,
                         3,
-                        block.textureRow
+                        block.textureRow,
+                        lightLevel
                     );
                 }
 
 
+                // ------------------------------------------------
                 // Right
-                if (!world.isSolidAt(x + 1, y, z))
+                // ------------------------------------------------
+
+                if (
+                    !world.isSolidAt(
+                        x + 1,
+                        y,
+                        z
+                    )
+                    )
                 {
                     addFace(
                         vertices,
@@ -178,13 +252,23 @@ void ChunkMesh::build(
                         y,
                         z,
                         4,
-                        block.textureRow
+                        block.textureRow,
+                        lightLevel
                     );
                 }
 
 
+                // ------------------------------------------------
                 // Top
-                if (!world.isSolidAt(x, y + 1, z))
+                // ------------------------------------------------
+
+                if (
+                    !world.isSolidAt(
+                        x,
+                        y + 1,
+                        z
+                    )
+                    )
                 {
                     addFace(
                         vertices,
@@ -192,13 +276,23 @@ void ChunkMesh::build(
                         y,
                         z,
                         0,
-                        block.textureRow
+                        block.textureRow,
+                        lightLevel
                     );
                 }
 
 
+                // ------------------------------------------------
                 // Bottom
-                if (!world.isSolidAt(x, y - 1, z))
+                // ------------------------------------------------
+
+                if (
+                    !world.isSolidAt(
+                        x,
+                        y - 1,
+                        z
+                    )
+                    )
                 {
                     addFace(
                         vertices,
@@ -206,7 +300,8 @@ void ChunkMesh::build(
                         y,
                         z,
                         5,
-                        block.textureRow
+                        block.textureRow,
+                        lightLevel
                     );
                 }
             }
@@ -214,18 +309,30 @@ void ChunkMesh::build(
     }
 
 
+    // ========================================================
+    // Vertex format
+    //
     // Each vertex contains:
     //
-    // XYZ
-    // UV
+    // X
+    // Y
+    // Z
+    //
+    // U
+    // V
+    //
     // face
+    //
     // texture row
     //
-    // = 7 floats
+    // light level
+    //
+    // = 8 floats
+    // ========================================================
 
     vertexCount =
         static_cast<int>(
-            vertices.size() / 7
+            vertices.size() / 8
             );
 
 
@@ -248,14 +355,20 @@ void ChunkMesh::build(
     );
 
 
-    // Position
+    // ========================================================
+    // Vertex attribute 0
+    //
+    // Position:
+    //
+    // X Y Z
+    // ========================================================
 
     glVertexAttribPointer(
         0,
         3,
         GL_FLOAT,
         GL_FALSE,
-        7 * sizeof(float),
+        8 * sizeof(float),
         (void*)0
     );
 
@@ -264,14 +377,20 @@ void ChunkMesh::build(
     );
 
 
-    // Texture UV
+    // ========================================================
+    // Vertex attribute 1
+    //
+    // Texture coordinates:
+    //
+    // U V
+    // ========================================================
 
     glVertexAttribPointer(
         1,
         2,
         GL_FLOAT,
         GL_FALSE,
-        7 * sizeof(float),
+        8 * sizeof(float),
         (void*)(3 * sizeof(float))
     );
 
@@ -280,14 +399,18 @@ void ChunkMesh::build(
     );
 
 
-    // Cube face
+    // ========================================================
+    // Vertex attribute 2
+    //
+    // Cube face number
+    // ========================================================
 
     glVertexAttribPointer(
         2,
         1,
         GL_FLOAT,
         GL_FALSE,
-        7 * sizeof(float),
+        8 * sizeof(float),
         (void*)(5 * sizeof(float))
     );
 
@@ -296,19 +419,50 @@ void ChunkMesh::build(
     );
 
 
-    // Block texture row
+    // ========================================================
+    // Vertex attribute 3
+    //
+    // Block texture atlas row
+    // ========================================================
 
     glVertexAttribPointer(
         3,
         1,
         GL_FLOAT,
         GL_FALSE,
-        7 * sizeof(float),
+        8 * sizeof(float),
         (void*)(6 * sizeof(float))
     );
 
     glEnableVertexAttribArray(
         3
+    );
+
+
+    // ========================================================
+    // Vertex attribute 4
+    //
+    // Light level
+    //
+    // Currently:
+    //
+    // 0 - 15
+    //
+    // The shader will later convert this into
+    // actual visible brightness.
+    // ========================================================
+
+    glVertexAttribPointer(
+        4,
+        1,
+        GL_FLOAT,
+        GL_FALSE,
+        8 * sizeof(float),
+        (void*)(7 * sizeof(float))
+    );
+
+    glEnableVertexAttribArray(
+        4
     );
 }
 
@@ -337,6 +491,7 @@ void ChunkMesh::draw() const
     );
 }
 
+
 // ============================================================
 // Add face
 //
@@ -348,8 +503,9 @@ void ChunkMesh::draw() const
 // U, V
 // face number
 // texture row
+// light level
 //
-// = 7 floats per vertex
+// = 8 floats per vertex
 // ============================================================
 
 void ChunkMesh::addFace(
@@ -358,18 +514,24 @@ void ChunkMesh::addFace(
     int y,
     int z,
     int face,
-    int textureRow
+    int textureRow,
+    int lightLevel
 )
 {
     // --------------------------------------------------------
     // The six faces of a cube
     //
     // Each face contains:
+    //
     // 2 triangles
     // 6 vertices
     //
-    // Each vertex contains:
+    // The temporary face data contains:
+    //
     // X, Y, Z, U, V
+    //
+    // The additional chunk information is added
+    // when the vertices are copied below.
     // --------------------------------------------------------
 
     static const float faces[6][30] =
@@ -377,6 +539,7 @@ void ChunkMesh::addFace(
         // ----------------------------------------------------
         // 0 = Top
         // ----------------------------------------------------
+
         {
             -0.5f,  0.5f, -0.5f,   0.0f, 1.0f,
             -0.5f,  0.5f,  0.5f,   0.0f, 0.0f,
@@ -391,6 +554,7 @@ void ChunkMesh::addFace(
         // ----------------------------------------------------
         // 1 = Front
         // ----------------------------------------------------
+
         {
             -0.5f, -0.5f,  0.5f,   0.0f, 0.0f,
              0.5f, -0.5f,  0.5f,   1.0f, 0.0f,
@@ -405,6 +569,7 @@ void ChunkMesh::addFace(
         // ----------------------------------------------------
         // 2 = Back
         // ----------------------------------------------------
+
         {
             -0.5f, -0.5f, -0.5f,   1.0f, 0.0f,
             -0.5f,  0.5f, -0.5f,   1.0f, 1.0f,
@@ -419,6 +584,7 @@ void ChunkMesh::addFace(
         // ----------------------------------------------------
         // 3 = Left
         // ----------------------------------------------------
+
         {
             -0.5f,  0.5f,  0.5f,   1.0f, 1.0f,
             -0.5f,  0.5f, -0.5f,   0.0f, 1.0f,
@@ -433,6 +599,7 @@ void ChunkMesh::addFace(
         // ----------------------------------------------------
         // 4 = Right
         // ----------------------------------------------------
+
         {
              0.5f,  0.5f,  0.5f,   0.0f, 1.0f,
              0.5f, -0.5f,  0.5f,   0.0f, 0.0f,
@@ -447,6 +614,7 @@ void ChunkMesh::addFace(
         // ----------------------------------------------------
         // 5 = Bottom
         // ----------------------------------------------------
+
         {
             -0.5f, -0.5f, -0.5f,   0.0f, 0.0f,
              0.5f, -0.5f, -0.5f,   1.0f, 0.0f,
@@ -460,30 +628,40 @@ void ChunkMesh::addFace(
 
 
     // --------------------------------------------------------
-    // Copy the selected face into our giant chunk vertex list
+    // Copy the selected face into our giant
+    // chunk vertex list.
     // --------------------------------------------------------
 
-    for (int vertex = 0; vertex < 6; vertex++)
+    for (
+        int vertex = 0;
+        vertex < 6;
+        vertex++
+        )
     {
         int index =
             vertex * 5;
 
 
+        // ----------------------------------------------------
         // Position
         //
         // Add the block's world position here.
-        // This means we no longer need a separate model matrix
-        // for every block.
+        //
+        // This means the chunk does not need a
+        // separate model matrix for every block.
+        // ----------------------------------------------------
 
         vertices.push_back(
             faces[face][index] +
             static_cast<float>(x)
         );
 
+
         vertices.push_back(
             faces[face][index + 1] +
             static_cast<float>(y)
         );
+
 
         vertices.push_back(
             faces[face][index + 2] +
@@ -491,28 +669,50 @@ void ChunkMesh::addFace(
         );
 
 
+        // ----------------------------------------------------
         // Texture coordinates
+        // ----------------------------------------------------
 
         vertices.push_back(
             faces[face][index + 3]
         );
+
 
         vertices.push_back(
             faces[face][index + 4]
         );
 
 
-        // Which cube face this is.
+        // ----------------------------------------------------
+        // Cube face number
+        // ----------------------------------------------------
 
         vertices.push_back(
-            static_cast<float>(face)
+            static_cast<float>(
+                face
+                )
         );
 
 
-        // Which block texture row this vertex uses.
+        // ----------------------------------------------------
+        // Block texture row
+        // ----------------------------------------------------
 
         vertices.push_back(
-            static_cast<float>(textureRow)
+            static_cast<float>(
+                textureRow
+                )
+        );
+
+
+        // ----------------------------------------------------
+        // Light level
+        // ----------------------------------------------------
+
+        vertices.push_back(
+            static_cast<float>(
+                lightLevel
+                )
         );
     }
 }

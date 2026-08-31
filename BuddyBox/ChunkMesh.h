@@ -2,7 +2,9 @@
 
 #include <vector>
 
+
 struct World;
+class Lighting;
 
 
 // ============================================================
@@ -27,8 +29,12 @@ public:
 
 
     // Builds this chunk's mesh from the world.
+    //
+    // Lighting is passed in so each visible
+    // face can store its current light level.
     void build(
         const World& world,
+        const Lighting& lighting,
         int chunkX,
         int chunkY,
         int chunkZ
@@ -48,12 +54,21 @@ private:
 
 
     // Adds one exposed cube face to the mesh.
+    //
+    // Each vertex stores:
+    //
+    // XYZ
+    // UV
+    // face
+    // texture row
+    // light level
     void addFace(
         std::vector<float>& vertices,
         int x,
         int y,
         int z,
         int face,
-        int textureRow
+        int textureRow,
+        int lightLevel
     );
 };

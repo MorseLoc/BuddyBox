@@ -48,6 +48,7 @@
 #include "NPCRenderer.h"
 #include "ChunkMesh.h"
 #include "DroppedItem.h"
+#include "lighting.h"
 
 // ============================================================
 // Mouse wheel input
@@ -173,6 +174,8 @@ int main()
 	Camera camera;
 
 	Inventory inventory;
+
+	Lighting lighting;
 
 	// All item entities currently
 // existing in the world.
@@ -305,6 +308,7 @@ int main()
 
 				chunk->build(
 					world,
+					lighting,
 					chunkX,
 					chunkY,
 					chunkZ
@@ -333,6 +337,7 @@ int main()
 
 			chunk->build(
 				world,
+				lighting,
 				chunkX,
 				chunkY,
 				chunkZ
@@ -572,6 +577,12 @@ int main()
 			<< "Blocks loaded: "
 			<< world.blocks.size()
 			<< "\n";
+
+
+		// Calculate the world's starting sunlight.
+		lighting.calculateSkyLight(
+			world
+		);
 
 
 		// Build the world's initial chunk meshes.
