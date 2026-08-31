@@ -237,16 +237,21 @@ Renderer::Renderer()
     // --------------------------------------------------------
     // IMPORTANT
     //
-    // Normal Renderer cubes do NOT contain attribute 3.
+    // Normal Renderer cubes do NOT contain attributes 3 or 4.
     //
-    // Attribute 3 is only used by ChunkMesh.
+    // Attribute 3 = ChunkMesh texture row
+    // Attribute 4 = ChunkMesh light level
     //
-    // We disable it here so the normal Renderer keeps using
-    // the uniform textureRow instead.
+    // They stay disabled on this VAO.
     // --------------------------------------------------------
 
     glDisableVertexAttribArray(
         3
+    );
+
+
+    glDisableVertexAttribArray(
+        4
     );
 
 
@@ -261,11 +266,13 @@ Renderer::Renderer()
         "layout (location = 1) in vec2 textureCoordinate;\n"
         "layout (location = 2) in float faceIndex;\n"
 
-        // Chunk meshes use this.
+        // Chunk meshes use these.
         "layout (location = 3) in float vertexTextureRow;\n"
+        "layout (location = 4) in float vertexLight;\n"
 
 
         "out vec2 texCoord;\n"
+        "out float lightLevel;\n"
 
 
         "uniform mat4 model;\n"
@@ -283,6 +290,10 @@ Renderer::Renderer()
         // true  = use vertexTextureRow attribute
         "uniform bool useVertexTextureRow;\n"
 
+        // false = normal cube is fully lit
+        // true  = use ChunkMesh light attribute
+        "uniform bool useVertexLight;\n"
+
         // true when using the one-column Itemdex texture.
         "uniform bool useItemAtlas;\n"
 
@@ -295,23 +306,23 @@ Renderer::Renderer()
 
 
         // ----------------------------------------------------
-// Horizontal atlas position
-//
-// Blocks use six horizontal face columns.
-//
-// Items use one horizontal column.
-// ----------------------------------------------------
+        // Horizontal atlas position
+        //
+        // Blocks use six horizontal face columns.
+        //
+        // Items use one horizontal column.
+        // ----------------------------------------------------
 
-"    float atlasU;\n"
+        "    float atlasU;\n"
 
-"    if (useItemAtlas)\n"
-"    {\n"
-"        atlasU = textureCoordinate.x;\n"
-"    }\n"
-"    else\n"
-"    {\n"
-"        atlasU = (faceIndex + textureCoordinate.x) / 6.0;\n"
-"    }\n"
+        "    if (useItemAtlas)\n"
+        "    {\n"
+        "        atlasU = textureCoordinate.x;\n"
+        "    }\n"
+        "    else\n"
+        "    {\n"
+        "        atlasU = (faceIndex + textureCoordinate.x) / 6.0;\n"
+        "    }\n"
 
 
         // ----------------------------------------------------
@@ -349,6 +360,27 @@ Renderer::Renderer()
         "    texCoord = vec2(atlasU, atlasV);\n"
 
 
+        // ----------------------------------------------------
+        // Lighting
+        //
+        // ChunkMesh stores values from 0 to 15.
+        //
+        // Convert that to 0.0 to 1.0.
+        //
+        // Normal Renderer cubes do not contain lighting data,
+        // so they use full brightness instead.
+        // ----------------------------------------------------
+
+        "    if (useVertexLight)\n"
+        "    {\n"
+        "        lightLevel = vertexLight / 15.0;\n"
+        "    }\n"
+        "    else\n"
+        "    {\n"
+        "        lightLevel = 1.0;\n"
+        "    }\n"
+
+
         "}\n";
 
 
@@ -379,6 +411,7 @@ Renderer::Renderer()
         "#version 330 core\n"
 
         "in vec2 texCoord;\n"
+        "in float lightLevel;\n"
 
 
         "out vec4 finalColor;\n"
@@ -401,13 +434,35 @@ Renderer::Renderer()
         "    if (useSolidColor)\n"
         "    {\n"
 
+        // Colored overlays and debug cubes currently ignore
+        // world lighting.
         "        finalColor = vec4(solidColor, opacity);\n"
 
         "    }\n"
         "    else\n"
         "    {\n"
 
-        "        finalColor = texture(blockTexture, texCoord);\n"
+        // Read the normal texture color.
+        "        vec4 textureColor = texture(blockTexture, texCoord);\n"
+
+
+        // ----------------------------------------------------
+        // Lighting brightness
+        //
+        // We leave a small amount of ambient brightness
+        // even when lightLevel is zero.
+        //
+        // 0 light  -> 15% brightness
+        // 15 light -> 100% brightness
+        // ----------------------------------------------------
+
+        "        float brightness = 0.15 + (lightLevel * 0.85);\n"
+
+
+        "        finalColor = vec4(\n"
+        "            textureColor.rgb * brightness,\n"
+        "            textureColor.a\n"
+        "        );\n"
 
         "    }\n"
 
@@ -527,6 +582,23 @@ void Renderer::drawColoredCube(
 
 
     // --------------------------------------------------------
+    // Colored cubes do not use chunk lighting.
+    // --------------------------------------------------------
+
+    int useVertexLightLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useVertexLight"
+        );
+
+
+    glUniform1i(
+        useVertexLightLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
     // Use solid color
     // --------------------------------------------------------
 
@@ -557,9 +629,10 @@ void Renderer::drawColoredCube(
         color.b
     );
 
+
     // --------------------------------------------------------
-// Opacity
-// --------------------------------------------------------
+    // Opacity
+    // --------------------------------------------------------
 
     int opacityLocation =
         glGetUniformLocation(
@@ -572,6 +645,8 @@ void Renderer::drawColoredCube(
         opacityLocation,
         opacity
     );
+
+
     // ========================================================
     // Model matrix
     // ========================================================
@@ -638,6 +713,7 @@ void Renderer::drawColoredCube(
 
 
     // Turn solid color mode back off.
+
     glUniform1i(
         useSolidColorLocation,
         0
@@ -665,12 +741,13 @@ void Renderer::drawTexturedCube(
         shaderProgram
     );
 
+
     // ========================================================
-// Item atlas mode
-//
-// false = normal 6-column block/NPC texture
-// true  = one-column Itemdex texture
-// ========================================================
+    // Item atlas mode
+    //
+    // false = normal 6-column block/NPC texture
+    // true  = one-column Itemdex texture
+    // ========================================================
 
     int useItemAtlasLocation =
         glGetUniformLocation(
@@ -702,12 +779,11 @@ void Renderer::drawTexturedCube(
     );
 
 
-    // IMPORTANT:
-    //
+    // --------------------------------------------------------
     // This is an old-style cube, not a ChunkMesh.
     //
-    // Therefore its texture row comes from the
-    // textureRow uniform.
+    // Its texture row comes from the textureRow uniform.
+    // --------------------------------------------------------
 
     int useVertexTextureRowLocation =
         glGetUniformLocation(
@@ -718,6 +794,26 @@ void Renderer::drawTexturedCube(
 
     glUniform1i(
         useVertexTextureRowLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
+    // Normal textured cubes do not contain
+    // the ChunkMesh light attribute.
+    //
+    // Keep them fully lit.
+    // --------------------------------------------------------
+
+    int useVertexLightLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useVertexLight"
+        );
+
+
+    glUniform1i(
+        useVertexLightLocation,
         0
     );
 
@@ -844,21 +940,24 @@ void Renderer::drawTexturedCube(
         36
     );
 
+
     // --------------------------------------------------------
-// Restore normal atlas mode
-//
-// Dropped items use the one-column Itemdex.
-//
-// Everything else in the world uses the normal
-// six-column texture atlas, so always reset this
-// when this draw call is finished.
-// --------------------------------------------------------
+    // Restore normal atlas mode
+    //
+    // Dropped items use the one-column Itemdex.
+    //
+    // Everything else in the world uses the normal
+    // six-column texture atlas, so always reset this
+    // when this draw call is finished.
+    // --------------------------------------------------------
 
     glUniform1i(
         useItemAtlasLocation,
         0
     );
 }
+
+
 // ============================================================
 // Draw dropped item
 //
@@ -892,18 +991,23 @@ void Renderer::drawDroppedItem(
             "useSolidColor"
         );
 
+
     glUniform1i(
         useSolidColorLocation,
         0
     );
 
 
+    // --------------------------------------------------------
     // We are supplying one texture row manually.
+    // --------------------------------------------------------
+
     int useVertexTextureRowLocation =
         glGetUniformLocation(
             shaderProgram,
             "useVertexTextureRow"
         );
+
 
     glUniform1i(
         useVertexTextureRowLocation,
@@ -912,7 +1016,26 @@ void Renderer::drawDroppedItem(
 
 
     // --------------------------------------------------------
-    // Tell the shader this is Itemdex
+    // Dropped items do not use ChunkMesh lighting.
+    //
+    // Keep them fully lit for now.
+    // --------------------------------------------------------
+
+    int useVertexLightLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "useVertexLight"
+        );
+
+
+    glUniform1i(
+        useVertexLightLocation,
+        0
+    );
+
+
+    // --------------------------------------------------------
+    // Tell the shader this is Itemdex.
     //
     // Itemdex has ONE horizontal column.
     // --------------------------------------------------------
@@ -922,6 +1045,7 @@ void Renderer::drawDroppedItem(
             shaderProgram,
             "useItemAtlas"
         );
+
 
     glUniform1i(
         useItemAtlasLocation,
@@ -937,6 +1061,7 @@ void Renderer::drawDroppedItem(
         GL_TEXTURE0
     );
 
+
     glBindTexture(
         GL_TEXTURE_2D,
         texture
@@ -948,6 +1073,7 @@ void Renderer::drawDroppedItem(
             shaderProgram,
             "blockTexture"
         );
+
 
     glUniform1i(
         textureLocation,
@@ -965,6 +1091,7 @@ void Renderer::drawDroppedItem(
             "textureRow"
         );
 
+
     glUniform1f(
         textureRowLocation,
         static_cast<float>(row)
@@ -976,6 +1103,7 @@ void Renderer::drawDroppedItem(
             shaderProgram,
             "atlasRows"
         );
+
 
     glUniform1f(
         atlasRowsLocation,
@@ -992,6 +1120,7 @@ void Renderer::drawDroppedItem(
 
 
     // Move sprite into the world.
+
     model =
         glm::translate(
             model,
@@ -1000,9 +1129,7 @@ void Renderer::drawDroppedItem(
 
 
     // Rotate around the Y axis.
-    //
-    // Soon we will calculate this yaw so the
-    // item always faces the player.
+
     model =
         glm::rotate(
             model,
@@ -1016,6 +1143,7 @@ void Renderer::drawDroppedItem(
 
 
     // Dropped items are smaller than blocks.
+
     model =
         glm::scale(
             model,
@@ -1032,6 +1160,7 @@ void Renderer::drawDroppedItem(
             shaderProgram,
             "model"
         );
+
 
     glUniformMatrix4fv(
         modelLocation,
@@ -1052,6 +1181,7 @@ void Renderer::drawDroppedItem(
         VAO
     );
 
+
     glDrawArrays(
         GL_TRIANGLES,
         0,
@@ -1060,12 +1190,9 @@ void Renderer::drawDroppedItem(
 
 
     // --------------------------------------------------------
-    // IMPORTANT
-    //
     // Return the shader to normal block-atlas mode.
     //
-    // Otherwise Itemdex mode leaks into the world
-    // and turns our textures into abstract cuisine.
+    // Otherwise Itemdex mode leaks into the world.
     // --------------------------------------------------------
 
     glUniform1i(

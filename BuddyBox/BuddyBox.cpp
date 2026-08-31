@@ -1487,14 +1487,40 @@ int main()
 		);
 
 
-		// ----------------------------------------------------
-		// Draw world chunk meshes
-		// ----------------------------------------------------
+		// --------------------------------------------------------
+// Enable ChunkMesh lighting
+// --------------------------------------------------------
+
+		int useVertexLightLocation =
+			glGetUniformLocation(
+				shaderProgram,
+				"useVertexLight"
+			);
+
+		glUniform1i(
+			useVertexLightLocation,
+			1
+		);
+
+
+		// --------------------------------------------------------
+		// Draw chunk meshes
+		// --------------------------------------------------------
 
 		for (const auto& entry : chunkMeshes)
 		{
 			entry.second->draw();
 		}
+
+
+		// --------------------------------------------------------
+		// Return to normal rendering
+		// --------------------------------------------------------
+
+		glUniform1i(
+			useVertexLightLocation,
+			0
+		);
 
 		// ----------------------------------------------------
 // Breaking block visual
