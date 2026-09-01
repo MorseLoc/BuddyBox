@@ -85,6 +85,12 @@ configure_file(
     COPYONLY
 )
 
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/textures/Inventory.png"
+    "${CMAKE_CURRENT_BINARY_DIR}/textures/Inventory.png"
+    COPYONLY
+)
+
 target_link_libraries(BuddyBox PRIVATE glfw glad::glad glm::glm OpenGL::GL)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

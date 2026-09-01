@@ -288,8 +288,22 @@ else if (drawMode == 3)
     );
 }
         }
+
+// -----------------------------------------------
+// Mode 4: full UI texture
+// -----------------------------------------------
+
+else if (drawMode == 4)
+{
+    finalColor =
+        texture(
+            uiTexture,
+            uv
+        );
+}
     )";
 
+ 
 
     // ========================================================
     // 5. Compile shaders
@@ -782,6 +796,108 @@ void UIRenderer::drawHotbar(
 
 
     // Restore normal 3D depth testing.
+    glEnable(
+        GL_DEPTH_TEST
+    );
+}
+
+// ============================================================
+// Draw inventory
+//
+// Draws the full 12-slot inventory background.
+// Inventory.png is 30 x 10 pixels:
+// - 6 slots across
+// - 2 rows tall
+// ============================================================
+
+void UIRenderer::drawInventory(
+    unsigned int inventoryTexture
+)
+{
+    glUseProgram(
+        shaderProgram
+    );
+
+    glDisable(
+        GL_DEPTH_TEST
+    );
+
+    glBindVertexArray(
+        VAO
+    );
+
+
+    int drawModeLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "drawMode"
+        );
+
+    int textureLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "uiTexture"
+        );
+
+    int scaleLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "uiScale"
+        );
+
+    int positionLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "uiPosition"
+        );
+
+
+    glActiveTexture(
+        GL_TEXTURE0
+    );
+
+    glUniform1i(
+        textureLocation,
+        0
+    );
+
+
+    glBindTexture(
+        GL_TEXTURE_2D,
+        inventoryTexture
+    );
+
+
+    // Draw the entire texture.
+    glUniform1i(
+        drawModeLocation,
+        4
+    );
+
+
+    // Inventory is twice as tall as the hotbar.
+    glUniform2f(
+        scaleLocation,
+        0.45f,
+        0.15f
+    );
+
+
+    // Center it on the screen for now.
+    glUniform2f(
+        positionLocation,
+        0.0f,
+        0.0f
+    );
+
+
+    glDrawArrays(
+        GL_TRIANGLES,
+        0,
+        6
+    );
+
+
     glEnable(
         GL_DEPTH_TEST
     );

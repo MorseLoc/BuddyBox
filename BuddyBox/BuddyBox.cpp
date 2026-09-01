@@ -569,6 +569,13 @@ int main()
 			"textures/ScrollWheel.png"
 		);
 
+	// Full 12-slot inventory window.
+// 30 pixels wide by 10 pixels tall.
+	unsigned int inventoryTexture =
+		textureManager.loadTexture(
+			"textures/Inventory.png"
+		);
+
 	// Number sprite sheet.
 //
 // Contains digits 0 - 9 in one horizontal row.
