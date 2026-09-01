@@ -462,6 +462,47 @@ int main()
 		};
 
 	// --------------------------------------------------------
+// Rebuild chunks whose lighting changed
+//
+// Lighting can travel farther than the block that changed,
+// so Lighting tells us exactly which chunk meshes need
+// their stored light values refreshed.
+// --------------------------------------------------------
+
+	auto rebuildLightingChunks =
+		[&](
+			const std::set<
+			std::tuple<int, int, int>
+			>& dirtyChunks
+			)
+		{
+			for (const auto& chunkPosition : dirtyChunks)
+			{
+				int chunkX =
+					std::get<0>(
+						chunkPosition
+					);
+
+				int chunkY =
+					std::get<1>(
+						chunkPosition
+					);
+
+				int chunkZ =
+					std::get<2>(
+						chunkPosition
+					);
+
+
+				rebuildChunk(
+					chunkX,
+					chunkY,
+					chunkZ
+				);
+			}
+		};
+
+	// --------------------------------------------------------
 	// 6. Initialize rendering systems
 	// --------------------------------------------------------
 
@@ -1091,6 +1132,11 @@ int main()
 							);
 						}
 
+						// Remove the block from the world first.
+//
+// Lighting::updateBlockChange()
+// expects the World to already contain
+// the NEW block state.
 						world.removeBlock(
 							hitX,
 							hitY,
@@ -1098,10 +1144,36 @@ int main()
 						);
 
 
+						// ------------------------------------------------
+						// Update lighting
+						// ------------------------------------------------
+
+						auto dirtyLightChunks =
+							lighting.updateBlockChange(
+								world,
+								hitX,
+								hitY,
+								hitZ
+							);
+
+
+						// ------------------------------------------------
+						// Rebuild changed geometry
+						// ------------------------------------------------
+
 						rebuildChunksAroundBlock(
 							hitX,
 							hitY,
 							hitZ
+						);
+
+
+						// ------------------------------------------------
+						// Rebuild anything whose LIGHT changed
+						// ------------------------------------------------
+
+						rebuildLightingChunks(
+							dirtyLightChunks
 						);
 
 
@@ -1249,14 +1321,42 @@ int main()
 							block
 						);
 
+
+						// ------------------------------------------------
+						// Update lighting
+						//
+						// The new solid block may block existing
+						// skylight, so the lighting system removes
+						// invalid light and re-propagates surviving
+						// light paths.
+						// ------------------------------------------------
+
+						auto dirtyLightChunks =
+							lighting.updateBlockChange(
+								world,
+								previousX,
+								previousY,
+								previousZ
+							);
+
+
 						// Remove one item from the selected stack
-// because the block was successfully placed.
+						// because the block was successfully placed.
 						inventory.removeSelectedItem();
 
+
+						// Rebuild geometry around the placed block.
 						rebuildChunksAroundBlock(
 							previousX,
 							previousY,
 							previousZ
+						);
+
+
+						// Rebuild every chunk whose stored
+						// vertex lighting changed.
+						rebuildLightingChunks(
+							dirtyLightChunks
 						);
 					}
 				}

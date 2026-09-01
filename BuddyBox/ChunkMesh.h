@@ -20,7 +20,8 @@ class ChunkMesh
 {
 public:
 
-    static const int CHUNK_SIZE = 16;
+    static const int CHUNK_SIZE =
+        16;
 
 
     ChunkMesh();
@@ -30,8 +31,8 @@ public:
 
     // Builds this chunk's mesh from the world.
     //
-    // Lighting is passed in so each visible
-    // face can store its current light level.
+    // Each visible face samples lighting from
+    // the AIR CELL directly beside that face.
     void build(
         const World& world,
         const Lighting& lighting,
@@ -61,7 +62,8 @@ private:
     // UV
     // face
     // texture row
-    // light level
+    // sky light
+    // block light
     void addFace(
         std::vector<float>& vertices,
         int x,
@@ -69,6 +71,7 @@ private:
         int z,
         int face,
         int textureRow,
-        int lightLevel
+        int skyLight,
+        int blockLight
     );
 };

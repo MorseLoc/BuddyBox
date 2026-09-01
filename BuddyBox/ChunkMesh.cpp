@@ -63,11 +63,11 @@ ChunkMesh::~ChunkMesh()
 //
 // Builds all visible block faces inside this chunk.
 //
-// Each visible face also receives the block's
-// current sky light level.
+// Lighting is sampled from the AIR CELL
+// directly beside each visible block face.
 //
-// The light level is stored directly inside
-// the chunk mesh so the shader can use it later.
+// This means one block can have different lighting
+// on different sides.
 // ============================================================
 
 void ChunkMesh::build(
@@ -140,30 +140,11 @@ void ChunkMesh::build(
 
 
                 // ------------------------------------------------
-                // Get this block's current sky light
-                // ------------------------------------------------
-                //
-                // For our first lighting version:
-                //
-                // 15 = exposed to sky
-                // 0  = covered
-                //
-                // Later this will also contain the
-                // propagated values:
-                //
-                // 14, 13, 12, etc.
-                // ------------------------------------------------
-
-                int lightLevel =
-                    lighting.getSkyLight(
-                        x,
-                        y,
-                        z
-                    );
-
-
-                // ------------------------------------------------
                 // Front
+                //
+                // Sample the air cell at:
+                //
+                // x, y, z + 1
                 // ------------------------------------------------
 
                 if (
@@ -174,6 +155,22 @@ void ChunkMesh::build(
                     )
                     )
                 {
+                    int skyLight =
+                        lighting.getSkyLight(
+                            x,
+                            y,
+                            z + 1
+                        );
+
+
+                    int blockLight =
+                        lighting.getBlockLight(
+                            x,
+                            y,
+                            z + 1
+                        );
+
+
                     addFace(
                         vertices,
                         x,
@@ -181,13 +178,18 @@ void ChunkMesh::build(
                         z,
                         1,
                         block.textureRow,
-                        lightLevel
+                        skyLight,
+                        blockLight
                     );
                 }
 
 
                 // ------------------------------------------------
                 // Back
+                //
+                // Sample the air cell at:
+                //
+                // x, y, z - 1
                 // ------------------------------------------------
 
                 if (
@@ -198,6 +200,22 @@ void ChunkMesh::build(
                     )
                     )
                 {
+                    int skyLight =
+                        lighting.getSkyLight(
+                            x,
+                            y,
+                            z - 1
+                        );
+
+
+                    int blockLight =
+                        lighting.getBlockLight(
+                            x,
+                            y,
+                            z - 1
+                        );
+
+
                     addFace(
                         vertices,
                         x,
@@ -205,13 +223,18 @@ void ChunkMesh::build(
                         z,
                         2,
                         block.textureRow,
-                        lightLevel
+                        skyLight,
+                        blockLight
                     );
                 }
 
 
                 // ------------------------------------------------
                 // Left
+                //
+                // Sample the air cell at:
+                //
+                // x - 1, y, z
                 // ------------------------------------------------
 
                 if (
@@ -222,6 +245,22 @@ void ChunkMesh::build(
                     )
                     )
                 {
+                    int skyLight =
+                        lighting.getSkyLight(
+                            x - 1,
+                            y,
+                            z
+                        );
+
+
+                    int blockLight =
+                        lighting.getBlockLight(
+                            x - 1,
+                            y,
+                            z
+                        );
+
+
                     addFace(
                         vertices,
                         x,
@@ -229,13 +268,18 @@ void ChunkMesh::build(
                         z,
                         3,
                         block.textureRow,
-                        lightLevel
+                        skyLight,
+                        blockLight
                     );
                 }
 
 
                 // ------------------------------------------------
                 // Right
+                //
+                // Sample the air cell at:
+                //
+                // x + 1, y, z
                 // ------------------------------------------------
 
                 if (
@@ -246,6 +290,22 @@ void ChunkMesh::build(
                     )
                     )
                 {
+                    int skyLight =
+                        lighting.getSkyLight(
+                            x + 1,
+                            y,
+                            z
+                        );
+
+
+                    int blockLight =
+                        lighting.getBlockLight(
+                            x + 1,
+                            y,
+                            z
+                        );
+
+
                     addFace(
                         vertices,
                         x,
@@ -253,13 +313,18 @@ void ChunkMesh::build(
                         z,
                         4,
                         block.textureRow,
-                        lightLevel
+                        skyLight,
+                        blockLight
                     );
                 }
 
 
                 // ------------------------------------------------
                 // Top
+                //
+                // Sample the air cell at:
+                //
+                // x, y + 1, z
                 // ------------------------------------------------
 
                 if (
@@ -270,6 +335,22 @@ void ChunkMesh::build(
                     )
                     )
                 {
+                    int skyLight =
+                        lighting.getSkyLight(
+                            x,
+                            y + 1,
+                            z
+                        );
+
+
+                    int blockLight =
+                        lighting.getBlockLight(
+                            x,
+                            y + 1,
+                            z
+                        );
+
+
                     addFace(
                         vertices,
                         x,
@@ -277,13 +358,18 @@ void ChunkMesh::build(
                         z,
                         0,
                         block.textureRow,
-                        lightLevel
+                        skyLight,
+                        blockLight
                     );
                 }
 
 
                 // ------------------------------------------------
                 // Bottom
+                //
+                // Sample the air cell at:
+                //
+                // x, y - 1, z
                 // ------------------------------------------------
 
                 if (
@@ -294,6 +380,22 @@ void ChunkMesh::build(
                     )
                     )
                 {
+                    int skyLight =
+                        lighting.getSkyLight(
+                            x,
+                            y - 1,
+                            z
+                        );
+
+
+                    int blockLight =
+                        lighting.getBlockLight(
+                            x,
+                            y - 1,
+                            z
+                        );
+
+
                     addFace(
                         vertices,
                         x,
@@ -301,7 +403,8 @@ void ChunkMesh::build(
                         z,
                         5,
                         block.textureRow,
-                        lightLevel
+                        skyLight,
+                        blockLight
                     );
                 }
             }
@@ -325,14 +428,16 @@ void ChunkMesh::build(
     //
     // texture row
     //
-    // light level
+    // sky light
     //
-    // = 8 floats
+    // block light
+    //
+    // = 9 floats
     // ========================================================
 
     vertexCount =
         static_cast<int>(
-            vertices.size() / 8
+            vertices.size() / 9
             );
 
 
@@ -368,7 +473,7 @@ void ChunkMesh::build(
         3,
         GL_FLOAT,
         GL_FALSE,
-        8 * sizeof(float),
+        9 * sizeof(float),
         (void*)0
     );
 
@@ -390,7 +495,7 @@ void ChunkMesh::build(
         2,
         GL_FLOAT,
         GL_FALSE,
-        8 * sizeof(float),
+        9 * sizeof(float),
         (void*)(3 * sizeof(float))
     );
 
@@ -410,7 +515,7 @@ void ChunkMesh::build(
         1,
         GL_FLOAT,
         GL_FALSE,
-        8 * sizeof(float),
+        9 * sizeof(float),
         (void*)(5 * sizeof(float))
     );
 
@@ -430,7 +535,7 @@ void ChunkMesh::build(
         1,
         GL_FLOAT,
         GL_FALSE,
-        8 * sizeof(float),
+        9 * sizeof(float),
         (void*)(6 * sizeof(float))
     );
 
@@ -442,14 +547,9 @@ void ChunkMesh::build(
     // ========================================================
     // Vertex attribute 4
     //
-    // Light level
-    //
-    // Currently:
+    // Sky light
     //
     // 0 - 15
-    //
-    // The shader will later convert this into
-    // actual visible brightness.
     // ========================================================
 
     glVertexAttribPointer(
@@ -457,12 +557,34 @@ void ChunkMesh::build(
         1,
         GL_FLOAT,
         GL_FALSE,
-        8 * sizeof(float),
+        9 * sizeof(float),
         (void*)(7 * sizeof(float))
     );
 
     glEnableVertexAttribArray(
         4
+    );
+
+
+    // ========================================================
+    // Vertex attribute 5
+    //
+    // Block light
+    //
+    // 0 - 15
+    // ========================================================
+
+    glVertexAttribPointer(
+        5,
+        1,
+        GL_FLOAT,
+        GL_FALSE,
+        9 * sizeof(float),
+        (void*)(8 * sizeof(float))
+    );
+
+    glEnableVertexAttribArray(
+        5
     );
 }
 
@@ -503,9 +625,10 @@ void ChunkMesh::draw() const
 // U, V
 // face number
 // texture row
-// light level
+// sky light
+// block light
 //
-// = 8 floats per vertex
+// = 9 floats per vertex
 // ============================================================
 
 void ChunkMesh::addFace(
@@ -515,7 +638,8 @@ void ChunkMesh::addFace(
     int z,
     int face,
     int textureRow,
-    int lightLevel
+    int skyLight,
+    int blockLight
 )
 {
     // --------------------------------------------------------
@@ -529,9 +653,6 @@ void ChunkMesh::addFace(
     // The temporary face data contains:
     //
     // X, Y, Z, U, V
-    //
-    // The additional chunk information is added
-    // when the vertices are copied below.
     // --------------------------------------------------------
 
     static const float faces[6][30] =
@@ -644,11 +765,6 @@ void ChunkMesh::addFace(
 
         // ----------------------------------------------------
         // Position
-        //
-        // Add the block's world position here.
-        //
-        // This means the chunk does not need a
-        // separate model matrix for every block.
         // ----------------------------------------------------
 
         vertices.push_back(
@@ -706,12 +822,23 @@ void ChunkMesh::addFace(
 
 
         // ----------------------------------------------------
-        // Light level
+        // Sky light
         // ----------------------------------------------------
 
         vertices.push_back(
             static_cast<float>(
-                lightLevel
+                skyLight
+                )
+        );
+
+
+        // ----------------------------------------------------
+        // Block light
+        // ----------------------------------------------------
+
+        vertices.push_back(
+            static_cast<float>(
+                blockLight
                 )
         );
     }
