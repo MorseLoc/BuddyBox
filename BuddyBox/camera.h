@@ -58,6 +58,13 @@ public:
     );
 
 
+    // Tells the camera to ignore the next mouse movement.
+    //
+    // Used after closing the inventory so GLFW's
+    // cursor recapture does not cause a camera jump.
+    void ignoreNextMouseMove();
+
+
     // --------------------------------------------------------
     // Camera information
     // --------------------------------------------------------
@@ -122,6 +129,11 @@ private:
     // mouse position to determine how far the mouse moved.
     double lastMouseX;
     double lastMouseY;
+
+
+    // Prevents GLFW cursor recapture from causing
+    // one giant fake mouse movement.
+    bool ignoreMouseMovement;
 
 
     // Controls how strongly mouse movement

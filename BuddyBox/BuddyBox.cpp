@@ -682,6 +682,15 @@ int main()
 	bool rightMouseWasPressed =
 		false;
 
+	// True while the inventory is open.
+	bool inventoryOpen =
+		false;
+
+
+	// Remembers Q from the previous frame.
+	// Prevents one press from toggling every frame.
+	bool qWasPressed =
+		false;
 
 	// ========================================================
 	// 11. Main game loop
@@ -716,14 +725,88 @@ int main()
 				0.05f;
 		}
 
+		// ----------------------------------------------------
+// Inventory open / close
+// ----------------------------------------------------
 
+		bool qPressed =
+			glfwGetKey(
+				window,
+				GLFW_KEY_Q
+			)
+			==
+			GLFW_PRESS;
+
+
+		// ----------------------------------------------------
+		// Toggle inventory only on the FIRST frame Q is pressed
+		// ----------------------------------------------------
+
+		if (
+			qPressed &&
+			!qWasPressed
+			)
+		{
+			inventoryOpen =
+				!inventoryOpen;
+
+
+			// ------------------------------------------------
+			// Inventory opened
+			// ------------------------------------------------
+
+			if (inventoryOpen)
+			{
+				// Release the mouse so it can move over the UI.
+				glfwSetInputMode(
+					window,
+					GLFW_CURSOR,
+					GLFW_CURSOR_NORMAL
+				);
+			}
+
+
+			// ------------------------------------------------
+			// Inventory closed
+			// ------------------------------------------------
+
+			else
+			{
+				// Capture the mouse again for camera movement.
+				glfwSetInputMode(
+					window,
+					GLFW_CURSOR,
+					GLFW_CURSOR_DISABLED
+				);
+
+
+				// GLFW may move the cursor when it becomes
+				// captured again.
+				//
+				// Ignore that fake movement so the camera
+				// does not suddenly jump.
+				camera.ignoreNextMouseMove();
+			}
+		}
+
+
+		// ----------------------------------------------------
+		// Remember Q's state for the next frame
+		// ----------------------------------------------------
+
+		qWasPressed =
+			qPressed;
 		// ----------------------------------------------------
 		// Camera update
 		// ----------------------------------------------------
 
-		camera.update(
-			window
-		);
+		if (!inventoryOpen)
+		{
+			camera.update(
+				window
+			);
+		}
+
 
 
 		// ----------------------------------------------------
@@ -1689,75 +1772,64 @@ int main()
 
 		for (const DroppedItem& droppedItem : droppedItems)
 		{
-			// Get the permanent properties of this item,
-			// including which Itemdex row it uses.
+			// Get this item's permanent information,
+			// including its Itemdex texture row.
 			Item item(
 				droppedItem.type
 			);
 
 
-			// ----------------------------------------------------
-// Draw dropped items
-// ----------------------------------------------------
+			// Find the direction from the item to the camera.
+			glm::vec3 directionToCamera =
+				camera.getPosition() -
+				droppedItem.position;
 
-			for (const DroppedItem& droppedItem : droppedItems)
-			{
-				// Get this item's permanent information,
-				// including its Itemdex texture row.
-				Item item(
-					droppedItem.type
+
+			// Rotate the flat item sprite so it faces the camera.
+			float itemYaw =
+				glm::degrees(
+					std::atan2(
+						directionToCamera.x,
+						directionToCamera.z
+					)
 				);
 
 
-				// ------------------------------------------------
-				// Find the direction from the item to the camera
-				// ------------------------------------------------
-
-				glm::vec3 directionToCamera =
-					camera.getPosition() -
-					droppedItem.position;
-
-
-				// We only care about horizontal rotation.
-				//
-				// atan2 converts the X/Z direction into
-				// an angle around the Y axis.
-				float itemYaw =
-					glm::degrees(
-						std::atan2(
-							directionToCamera.x,
-							directionToCamera.z
-						)
-					);
-
-
-				// ------------------------------------------------
-				// Draw the flat sprite
-				// ------------------------------------------------
-
-				renderer.drawDroppedItem(
-					droppedItem.position,
-					itemAtlasTexture,
-					item.textureRow,
-					6,
-					itemYaw
-				);
-			}
+			renderer.drawDroppedItem(
+				droppedItem.position,
+				itemAtlasTexture,
+				item.textureRow,
+				6,
+				itemYaw
+			);
 		}
 
 
 		// ----------------------------------------------------
-		// Draw UI
-		// ----------------------------------------------------
+// Draw inventory background when open
+// ----------------------------------------------------
 
-		uiRenderer.drawHotbar(
-			scrollWheelTexture,
-			itemAtlasTexture,
-			numberAtlasTexture,
-			inventory.getSelectedSlot(),
-			inventory,
-			6
-		);
+		if (inventoryOpen)
+		{
+			uiRenderer.drawInventory(
+				inventoryTexture,
+				itemAtlasTexture,
+				numberAtlasTexture,
+				inventory,
+				6
+			);
+		}
+		else
+		{
+			uiRenderer.drawHotbar(
+				scrollWheelTexture,
+				itemAtlasTexture,
+				numberAtlasTexture,
+				inventory.getSelectedSlot(),
+				inventory,
+				6
+			);
+		}
 
 
 		uiRenderer.drawCrosshair();

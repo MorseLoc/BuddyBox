@@ -279,15 +279,15 @@ else if (drawMode == 3)
         uv.x * digitWidth;
 
     finalColor =
-    texture(
-        uiTexture,
-        vec2(
-            numberU,
-            1.0 - uv.y
-        )
-    );
+        texture(
+            uiTexture,
+            vec2(
+                numberU,
+                1.0 - uv.y
+            )
+        );
 }
-        }
+
 
 // -----------------------------------------------
 // Mode 4: full UI texture
@@ -301,7 +301,10 @@ else if (drawMode == 4)
             uv
         );
 }
-    )";
+
+} // <-- THIS closes main()
+
+)"; // <-- THIS closes the shader string
 
  
 
@@ -804,28 +807,42 @@ void UIRenderer::drawHotbar(
 // ============================================================
 // Draw inventory
 //
-// Draws the full 12-slot inventory background.
-// Inventory.png is 30 x 10 pixels:
-// - 6 slots across
-// - 2 rows tall
+// Draws:
+// - Full 12-slot inventory background
+// - All 12 item icons
+// - Stack amounts
+//
+// Slots:
+// 0 - 5  = bottom row / hotbar
+// 6 - 11 = top row / inventory storage
 // ============================================================
 
 void UIRenderer::drawInventory(
-    unsigned int inventoryTexture
+    unsigned int inventoryTexture,
+    unsigned int itemAtlasTexture,
+    unsigned int numberAtlasTexture,
+    const Inventory& inventory,
+    int itemAtlasRows
 )
 {
     glUseProgram(
         shaderProgram
     );
 
+
     glDisable(
         GL_DEPTH_TEST
     );
+
 
     glBindVertexArray(
         VAO
     );
 
+
+    // --------------------------------------------------------
+    // Shader locations
+    // --------------------------------------------------------
 
     int drawModeLocation =
         glGetUniformLocation(
@@ -833,17 +850,20 @@ void UIRenderer::drawInventory(
             "drawMode"
         );
 
+
     int textureLocation =
         glGetUniformLocation(
             shaderProgram,
             "uiTexture"
         );
 
+
     int scaleLocation =
         glGetUniformLocation(
             shaderProgram,
             "uiScale"
         );
+
 
     int positionLocation =
         glGetUniformLocation(
@@ -852,9 +872,31 @@ void UIRenderer::drawInventory(
         );
 
 
+    int atlasRowsLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "atlasRows"
+        );
+
+
+    int textureRowLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "textureRow"
+        );
+
+
+    int numberDigitLocation =
+        glGetUniformLocation(
+            shaderProgram,
+            "numberDigit"
+        );
+
+
     glActiveTexture(
         GL_TEXTURE0
     );
+
 
     glUniform1i(
         textureLocation,
@@ -862,20 +904,22 @@ void UIRenderer::drawInventory(
     );
 
 
+    // ========================================================
+    // Draw inventory background
+    // ========================================================
+
     glBindTexture(
         GL_TEXTURE_2D,
         inventoryTexture
     );
 
 
-    // Draw the entire texture.
     glUniform1i(
         drawModeLocation,
         4
     );
 
 
-    // Inventory is twice as tall as the hotbar.
     glUniform2f(
         scaleLocation,
         0.45f,
@@ -883,11 +927,10 @@ void UIRenderer::drawInventory(
     );
 
 
-    // Center it on the screen for now.
     glUniform2f(
         positionLocation,
         0.0f,
-        0.0f
+        -0.775f
     );
 
 
@@ -898,11 +941,268 @@ void UIRenderer::drawInventory(
     );
 
 
+    // ========================================================
+    // Draw item icons
+    // ========================================================
+
+    glUniform1i(
+        drawModeLocation,
+        1
+    );
+
+
+    glBindTexture(
+        GL_TEXTURE_2D,
+        itemAtlasTexture
+    );
+
+
+    glUniform1f(
+        atlasRowsLocation,
+        static_cast<float>(
+            itemAtlasRows
+            )
+    );
+
+
+    glUniform2f(
+        scaleLocation,
+        0.055f,
+        0.065f
+    );
+
+
+    for (int slot = 0; slot < 12; slot++)
+    {
+        ItemType itemType =
+            inventory.getItemTypeAtSlot(
+                slot
+            );
+
+
+        if (
+            itemType ==
+            ItemType::None
+            )
+        {
+            continue;
+        }
+
+
+        Item item(
+            itemType
+        );
+
+
+        glUniform1f(
+            textureRowLocation,
+            static_cast<float>(
+                item.textureRow
+                )
+        );
+
+
+        // Convert slot 0 - 11 into column 0 - 5.
+        int column =
+            slot % 6;
+
+
+        float slotX =
+            -0.375f +
+            (
+                static_cast<float>(column)
+                * 0.15f
+                );
+
+
+        // Bottom row = slots 0 - 5.
+        // Top row    = slots 6 - 11.
+        float slotY;
+
+
+        if (slot < 6)
+        {
+            slotY =
+                -0.85f;
+        }
+        else
+        {
+            slotY =
+                -0.70f;
+        }
+
+
+        glUniform2f(
+            positionLocation,
+            slotX,
+            slotY
+        );
+
+
+        glDrawArrays(
+            GL_TRIANGLES,
+            0,
+            6
+        );
+    }
+
+
+    // ========================================================
+    // Draw stack amounts
+    // ========================================================
+
+    glUniform1i(
+        drawModeLocation,
+        3
+    );
+
+
+    glBindTexture(
+        GL_TEXTURE_2D,
+        numberAtlasTexture
+    );
+
+
+    glUniform2f(
+        scaleLocation,
+        0.018f,
+        0.030f
+    );
+
+
+    for (int slot = 0; slot < 12; slot++)
+    {
+        int amount =
+            inventory.getAmountAtSlot(
+                slot
+            );
+
+
+        if (amount <= 1)
+        {
+            continue;
+        }
+
+
+        int column =
+            slot % 6;
+
+
+        float slotX =
+            -0.375f +
+            (
+                static_cast<float>(column)
+                * 0.15f
+                );
+
+
+        float slotY;
+
+
+        if (slot < 6)
+        {
+            slotY =
+                -0.885f;
+        }
+        else
+        {
+            slotY =
+                -0.735f;
+        }
+
+
+        // ----------------------------------------------------
+        // Single digit
+        // ----------------------------------------------------
+
+        if (amount < 10)
+        {
+            glUniform1f(
+                numberDigitLocation,
+                static_cast<float>(
+                    amount
+                    )
+            );
+
+
+            glUniform2f(
+                positionLocation,
+                slotX + 0.040f,
+                slotY
+            );
+
+
+            glDrawArrays(
+                GL_TRIANGLES,
+                0,
+                6
+            );
+        }
+
+        // ----------------------------------------------------
+        // Two digits
+        // ----------------------------------------------------
+
+        else
+        {
+            int tensDigit =
+                amount / 10;
+
+
+            int onesDigit =
+                amount % 10;
+
+
+            glUniform1f(
+                numberDigitLocation,
+                static_cast<float>(
+                    tensDigit
+                    )
+            );
+
+
+            glUniform2f(
+                positionLocation,
+                slotX + 0.018f,
+                slotY
+            );
+
+
+            glDrawArrays(
+                GL_TRIANGLES,
+                0,
+                6
+            );
+
+
+            glUniform1f(
+                numberDigitLocation,
+                static_cast<float>(
+                    onesDigit
+                    )
+            );
+
+
+            glUniform2f(
+                positionLocation,
+                slotX + 0.048f,
+                slotY
+            );
+
+
+            glDrawArrays(
+                GL_TRIANGLES,
+                0,
+                6
+            );
+        }
+    }
+
+
     glEnable(
         GL_DEPTH_TEST
     );
 }
-
 
 // ============================================================
 // Draw crosshair

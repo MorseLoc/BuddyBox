@@ -77,7 +77,11 @@ public:
 
     // Draws the full 12-slot inventory background.
     void drawInventory(
-        unsigned int inventoryTexture
+        unsigned int inventoryTexture,
+        unsigned int itemAtlasTexture,
+        unsigned int numberAtlasTexture,
+        const Inventory& inventory,
+        int itemAtlasRows
     );
 
     // --------------------------------------------------------

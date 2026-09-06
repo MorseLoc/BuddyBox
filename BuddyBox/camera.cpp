@@ -59,6 +59,10 @@ Camera::Camera()
     lastMouseY = 300.0;
 
 
+    // Start normally reading mouse movement.
+    ignoreMouseMovement = false;
+
+
     // Controls how strongly mouse movement rotates the camera.
     mouseSensitivity = 0.2f;
 }
@@ -88,6 +92,31 @@ void Camera::update(
         &mouseX,
         &mouseY
     );
+
+
+    // --------------------------------------------------------
+    // Ignore one mouse movement when requested
+    //
+    // This is used after GLFW recaptures the cursor.
+    // We update the saved mouse position but do NOT
+    // rotate the camera for this frame.
+    // --------------------------------------------------------
+
+    if (ignoreMouseMovement)
+    {
+        lastMouseX =
+            mouseX;
+
+        lastMouseY =
+            mouseY;
+
+
+        ignoreMouseMovement =
+            false;
+
+
+        return;
+    }
 
 
     // --------------------------------------------------------
@@ -182,6 +211,22 @@ void Camera::update(
     // Normalize so front always has a length of 1.
     front =
         glm::normalize(direction);
+}
+
+
+// ============================================================
+// Ignore next mouse movement
+//
+// Used after closing the inventory.
+//
+// GLFW may move the cursor when it becomes captured again.
+// That movement should not rotate the camera.
+// ============================================================
+
+void Camera::ignoreNextMouseMove()
+{
+    ignoreMouseMovement =
+        true;
 }
 
 
