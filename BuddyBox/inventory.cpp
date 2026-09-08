@@ -77,14 +77,24 @@ bool Inventory::loadFromFile(
             slots[slot].item = ItemType::WoodBlock;
             slots[slot].amount = 1;
         }
-        else if (itemName == "Leaf")
+        else if (itemName == "Wood2")
         {
-            slots[slot].item = ItemType::LeafBlock;
+            slots[slot].item = ItemType::Wood2Block;
             slots[slot].amount = 1;
         }
-        else if (itemName == "Stone")
+        else if (itemName == "Wood3")
         {
-            slots[slot].item = ItemType::StoneBlock;
+            slots[slot].item = ItemType::Wood3Block;
+            slots[slot].amount = 1;
+        }
+        else if (itemName == "Wood4")
+        {
+            slots[slot].item = ItemType::Wood4Block;
+            slots[slot].amount = 1;
+        }
+        else if (itemName == "Pebble")
+        {
+            slots[slot].item = ItemType::Pebble;
             slots[slot].amount = 1;
         }
         else if (itemName == "Stick")

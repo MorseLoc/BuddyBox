@@ -124,4 +124,5 @@ Item::Item(
 
         feature =
             ItemFeature::None;
+    }
 }
