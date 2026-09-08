@@ -274,6 +274,30 @@ bool World::loadFromFile(
         {
             blockType = BlockType::Stone;
         }
+        else if (blockTypeName == "Wood2")
+        {
+            blockType = BlockType::Wood2;
+        }
+        else if (blockTypeName == "Wood3")
+        {
+            blockType = BlockType::Wood3;
+        }
+        else if (blockTypeName == "Wood4")
+        {
+            blockType = BlockType::Wood4;
+        }
+        else if (blockTypeName == "YellowFlower")
+        {
+            blockType = BlockType::YellowFlower;
+        }
+        else if (blockTypeName == "RedFlower")
+        {
+            blockType = BlockType::RedFlower;
+        }
+        else if (blockTypeName == "BlueFlower")
+        {
+            blockType = BlockType::BlueFlower;
+        }
         else
         {
             // Skip unknown block types.
