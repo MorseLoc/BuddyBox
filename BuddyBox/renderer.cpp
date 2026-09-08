@@ -445,6 +445,12 @@ Renderer::Renderer()
         // Read the normal texture color.
         "        vec4 textureColor = texture(blockTexture, texCoord);\n"
 
+        // Transparent pixels must not hide anything behind them.
+        "        if (textureColor.a < 0.5)\n"
+        "        {\n"
+        "            discard;\n"
+        "        }\n"
+
 
         // ----------------------------------------------------
         // Lighting brightness

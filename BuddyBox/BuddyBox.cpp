@@ -1072,7 +1072,7 @@ int main()
                 droppedItem.position,
                 itemAtlasTexture,
                 item.textureRow,
-                6,
+                8,
                 itemYaw
             );
         }

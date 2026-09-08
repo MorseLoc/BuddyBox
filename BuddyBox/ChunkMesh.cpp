@@ -138,6 +138,37 @@ void ChunkMesh::build(
                 const Block& block =
                     blockIterator->second;
 
+                // Decide whether the neighboring block hides this face.
+                auto shouldDrawFace = [&](int nx, int ny, int nz)
+                    {
+                        auto neighbor = world.blocks.find(
+                            std::make_tuple(nx, ny, nz)
+                        );
+
+                        // Empty space does not hide a face.
+                        if (neighbor == world.blocks.end() ||
+                            !neighbor->second.solid)
+                        {
+                            return true;
+                        }
+
+                        // Normal solid blocks hide the face beside them.
+                        if (neighbor->second.type != BlockType::Leaf)
+                        {
+                            return false;
+                        }
+
+                        // Keep wood, stone, etc. visible behind leaf holes.
+                        if (block.type != BlockType::Leaf)
+                        {
+                            return true;
+                        }
+
+                        // Between two leaves, keep one shared face.
+                        // The current renderer draws both sides of that face.
+                        return nx > x || ny > y || nz > z;
+                    };
+
 
                 // ------------------------------------------------
                 // Front
@@ -148,7 +179,7 @@ void ChunkMesh::build(
                 // ------------------------------------------------
 
                 if (
-                    !world.isSolidAt(
+                    shouldDrawFace(
                         x,
                         y,
                         z + 1
@@ -193,7 +224,7 @@ void ChunkMesh::build(
                 // ------------------------------------------------
 
                 if (
-                    !world.isSolidAt(
+                    shouldDrawFace(
                         x,
                         y,
                         z - 1
@@ -238,7 +269,7 @@ void ChunkMesh::build(
                 // ------------------------------------------------
 
                 if (
-                    !world.isSolidAt(
+                    shouldDrawFace(
                         x - 1,
                         y,
                         z
@@ -283,7 +314,7 @@ void ChunkMesh::build(
                 // ------------------------------------------------
 
                 if (
-                    !world.isSolidAt(
+                    shouldDrawFace(
                         x + 1,
                         y,
                         z
@@ -328,7 +359,7 @@ void ChunkMesh::build(
                 // ------------------------------------------------
 
                 if (
-                    !world.isSolidAt(
+                    shouldDrawFace(
                         x,
                         y + 1,
                         z
@@ -373,7 +404,7 @@ void ChunkMesh::build(
                 // ------------------------------------------------
 
                 if (
-                    !world.isSolidAt(
+                    shouldDrawFace(
                         x,
                         y - 1,
                         z
