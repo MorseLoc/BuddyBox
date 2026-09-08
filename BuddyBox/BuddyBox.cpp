@@ -641,6 +641,15 @@ int main()
 
             if (
                 focused &&
+                rightMousePressed &&
+                !rightMouseWasPressed
+                )
+            {
+                inventory.placeOneFromDrag(hoveredSlot);
+            }
+
+            if (
+                focused &&
                 !leftMousePressed &&
                 leftMouseWasPressed
                 )

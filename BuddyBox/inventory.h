@@ -54,6 +54,8 @@ public:
     // Release over a slot to move, combine, or swap items.
     void finishDrag(int destination);
 
+    bool placeOneFromDrag(int destination);
+
     // Cancel without moving any items.
     void cancelDrag();
 

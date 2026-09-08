@@ -109,6 +109,54 @@ bool Inventory::loadFromFile(
     return true;
 }
 
+bool Inventory::placeOneFromDrag(int destination)
+{
+    if (
+        draggedSlot < 0 ||
+        destination < 0 ||
+        destination >= SLOT_COUNT ||
+        destination == draggedSlot
+        )
+    {
+        return false;
+    }
+
+    InventorySlot& from = slots[draggedSlot];
+    InventorySlot& to = slots[destination];
+
+    if (from.item == ItemType::None || from.amount <= 0)
+    {
+        cancelDrag();
+        return false;
+    }
+
+    if (to.item == ItemType::None)
+    {
+        to.item = from.item;
+        to.amount = 1;
+    }
+    else if (
+        to.item == from.item &&
+        to.amount < MAX_STACK_SIZE
+        )
+    {
+        to.amount += 1;
+    }
+    else
+    {
+        return false;
+    }
+
+    from.amount -= 1;
+
+    if (from.amount == 0)
+    {
+        from = InventorySlot{};
+        cancelDrag();
+    }
+
+    return true;
+}
 
 // ============================================================
 // Cycle selected hotbar slot
