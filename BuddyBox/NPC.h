@@ -98,6 +98,20 @@ public:
     // Returns true when the NPC is currently trying to walk.
     bool isMoving() const;
 
+    // Returns true when a ray touches this NPC's hitbox.
+    bool raycastHit(
+        const glm::vec3& rayStart,
+        const glm::vec3& rayDirection,
+        float maxDistance,
+        float& hitDistance
+    ) const;
+
+    // Pushes this NPC away from the punch source.
+    void applyKnockback(
+        const glm::vec3& punchSource,
+        float strength
+    );
+
 
 private:
     // --------------------------------------------------------
@@ -149,6 +163,9 @@ private:
     // Negative = falling
     // Zero     = no vertical movement
     float verticalVelocity;
+
+    // Horizontal force left over from a punch.
+    glm::vec3 knockbackVelocity;
 
 
     // true when the NPC is standing

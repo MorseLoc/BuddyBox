@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 
 
 // ============================================================
@@ -47,6 +48,8 @@ NPC::NPC(
 
     // Start with no vertical movement.
     verticalVelocity = 0.0f;
+
+    knockbackVelocity = glm::vec3(0.0f);
 
 
     // Collision will determine whether
@@ -99,11 +102,12 @@ void NPC::update(
     // Choose a destination
     // --------------------------------------------------------
 
-    if (!hasTarget)
+    if (
+        !hasTarget &&
+        glm::length(knockbackVelocity) < 0.05f
+        )
     {
-        chooseRandomTarget(
-            world
-        );
+        chooseRandomTarget(world);
     }
 
 
@@ -125,6 +129,46 @@ void NPC::update(
             deltaTime,
             world
         );
+    }
+
+    // --------------------------------------------------------
+// Punch knockback
+// --------------------------------------------------------
+
+    if (glm::length(knockbackVelocity) >= 0.05f)
+    {
+        glm::vec3 knockbackMove =
+            knockbackVelocity * deltaTime;
+
+        glm::vec3 testPosition = position;
+
+        testPosition.x += knockbackMove.x;
+
+        if (!collidesWithWorld(testPosition, world))
+        {
+            position.x = testPosition.x;
+        }
+        else
+        {
+            knockbackVelocity.x = 0.0f;
+        }
+
+        testPosition = position;
+        testPosition.z += knockbackMove.z;
+
+        if (!collidesWithWorld(testPosition, world))
+        {
+            position.z = testPosition.z;
+        }
+        else
+        {
+            knockbackVelocity.z = 0.0f;
+        }
+
+        // Slow the push down smoothly.
+        knockbackVelocity *= std::exp(-7.0f * deltaTime);
+
+        moving = true;
     }
 
 
@@ -769,4 +813,87 @@ float NPC::getWalkAnimationTime() const
 bool NPC::isMoving() const
 {
     return moving;
+}
+
+bool NPC::raycastHit(
+    const glm::vec3& rayStart,
+    const glm::vec3& rayDirection,
+    float maxDistance,
+    float& hitDistance
+) const
+{
+    glm::vec3 hitboxMin = position - size * 0.5f;
+    glm::vec3 hitboxMax = position + size * 0.5f;
+
+    float nearestDistance = 0.0f;
+    float farthestDistance = maxDistance;
+
+    for (int axis = 0; axis < 3; axis++)
+    {
+        if (std::abs(rayDirection[axis]) < 0.0001f)
+        {
+            if (
+                rayStart[axis] < hitboxMin[axis] ||
+                rayStart[axis] > hitboxMax[axis]
+                )
+            {
+                return false;
+            }
+
+            continue;
+        }
+
+        float firstDistance =
+            (hitboxMin[axis] - rayStart[axis]) /
+            rayDirection[axis];
+
+        float secondDistance =
+            (hitboxMax[axis] - rayStart[axis]) /
+            rayDirection[axis];
+
+        if (firstDistance > secondDistance)
+        {
+            std::swap(firstDistance, secondDistance);
+        }
+
+        nearestDistance =
+            std::max(nearestDistance, firstDistance);
+
+        farthestDistance =
+            std::min(farthestDistance, secondDistance);
+
+        if (nearestDistance > farthestDistance)
+        {
+            return false;
+        }
+    }
+
+    hitDistance = nearestDistance;
+    return true;
+}
+
+
+void NPC::applyKnockback(
+    const glm::vec3& punchSource,
+    float strength
+)
+{
+    glm::vec3 direction =
+        position - punchSource;
+
+    direction.y = 0.0f;
+
+    if (glm::length(direction) < 0.001f)
+    {
+        return;
+    }
+
+    knockbackVelocity =
+        glm::normalize(direction) * strength;
+
+    verticalVelocity =
+        std::max(verticalVelocity, 3.5f);
+
+    hasTarget = false;
+    stuckTimer = 0.0f;
 }

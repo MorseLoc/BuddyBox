@@ -795,6 +795,46 @@ int main()
             isBreakingBlock = false;
         }
 
+        NPC* hitNPC = nullptr;
+        float closestNPCDistance = 5.0f;
+
+        if (
+            allowWorldMouse &&
+            leftMousePressed &&
+            hitNPC == nullptr
+            )
+        {
+            for (NPC& npc : npcs)
+            {
+                float hitDistance = 0.0f;
+
+                if (
+                    npc.raycastHit(
+                        camera.getPosition(),
+                        camera.getFront(),
+                        5.0f,
+                        hitDistance
+                    ) &&
+                    hitDistance < closestNPCDistance
+                    )
+                {
+                    closestNPCDistance = hitDistance;
+                    hitNPC = &npc;
+                }
+            }
+        }
+
+        if (
+            hitNPC != nullptr &&
+            !leftMouseWasPressed
+            )
+        {
+            hitNPC->applyKnockback(
+                player.position,
+                7.0f
+            );
+        }
+
         // ----------------------------------------------------
         // Place blocks
         // ----------------------------------------------------
