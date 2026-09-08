@@ -3,10 +3,7 @@
 #include <glm/glm.hpp>
 
 
-// Forward declarations.
-//
-// These tell C++ that these types exist without forcing
-// Player.h to include their full header files.
+// These types are defined elsewhere.
 struct GLFWwindow;
 struct World;
 
@@ -14,17 +11,7 @@ struct World;
 // ============================================================
 // Player
 //
-// Represents the player inside the BuddyBox world.
-//
-// The Player stores:
-// - Position
-// - Collision-box size
-// - Walking speed
-// - Vertical movement
-// - Grounded state
-//
-// Player.cpp handles movement, gravity, jumping,
-// and collision with the world.
+// Stores the player's position, collision box, and movement.
 // ============================================================
 
 struct Player
@@ -33,46 +20,28 @@ struct Player
     // Position and size
     // --------------------------------------------------------
 
-    // Center position of the player in the 3D world.
-    //
-    // X = left / right
-    // Y = up / down
-    // Z = forward / backward
+    // Center of the player in world coordinates.
     glm::vec3 position;
 
-
-    // Size of the player's invisible collision box.
-    //
-    // X = width
-    // Y = height
-    // Z = depth
+    // Collision-box width, height, and depth.
     glm::vec3 size;
 
 
     // --------------------------------------------------------
-    // Movement
+    // Movement properties
     // --------------------------------------------------------
 
-    // Horizontal walking speed.
-    // Measured in world units per second.
+    // Walking speed in world units per second.
     float speed;
 
-    // Base time used when breaking blocks.
-//
-// 1.0f means each point of block durability
-// takes one second to break.
+    // Seconds needed per point of block durability.
     float breakSpeed;
 
-
-    // Current movement speed on the Y axis.
-    //
-    // Positive = moving upward
-    // Negative = falling
-    // Zero     = no vertical movement
+    // Positive = rising.
+    // Negative = falling.
     float verticalVelocity;
 
-
-    // true when the player is standing on solid ground.
+    // True when standing on solid ground.
     bool grounded;
 
 
@@ -80,8 +49,6 @@ struct Player
     // Constructor
     // --------------------------------------------------------
 
-    // Creates a player with the default values
-    // defined in Player.cpp.
     Player();
 
 
@@ -89,12 +56,8 @@ struct Player
     // Collision
     // --------------------------------------------------------
 
-    // Tests whether the player's collision box would overlap
-    // any solid block at testPosition.
-    //
-    // Returns:
-    // true  = collision
-    // false = position is clear
+    // Returns true if the player's collision box at
+    // testPosition overlaps a solid block.
     bool collidesWithWorld(
         const glm::vec3& testPosition,
         const World& world
@@ -105,24 +68,23 @@ struct Player
     // Movement update
     // --------------------------------------------------------
 
-    // Handles one frame of player movement.
+    // Handles walking, jumping, gravity, and collision.
     //
-    // This includes:
-    // - WASD movement
-    // - Horizontal collision
-    // - Jumping
-    // - Gravity
-    // - Vertical collision
+    // deltaTime:
+    //     Time elapsed for this update, in seconds.
     //
-    // deltaTime keeps movement independent of frame rate.
+    // cameraFront / cameraUp:
+    //     Used to calculate walking directions.
     //
-    // cameraFront tells the player which direction is forward.
-    // cameraUp helps calculate the sideways direction.
+    // acceptInput:
+    //     False disables walking and jumping input.
+    //     Gravity and collision continue working.
     void move(
         GLFWwindow* window,
         float deltaTime,
         const glm::vec3& cameraFront,
         const glm::vec3& cameraUp,
-        const World& world
+        const World& world,
+        bool acceptInput = true
     );
 };

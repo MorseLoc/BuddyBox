@@ -100,7 +100,10 @@ Block::Block(BlockType blockType)
         // Wood uses row 3 of the texture atlas.
         textureRow = 3;
 
-        durability = 5.0f;
+        durability = 2.0f;
+
+        dropItem =
+            ItemType::WoodBlock;
     }
 
     else if (type == BlockType::Leaf)
@@ -117,7 +120,73 @@ Block::Block(BlockType blockType)
         // Stone uses row 5 of the texture atlas.
         textureRow = 5;
 
-        durability = 20.0f;
+        durability = 3.0f;
+
+        dropItem =
+            ItemType::Pebble;
+    }
+    else if (type == BlockType::Wood2)
+    {
+        // Wood2 uses row 6 of the texture atlas.
+        textureRow = 6;
+
+        durability = 2.0f;
+
+        dropItem =
+            ItemType::Wood2Block;
+    }
+    else if (type == BlockType::Wood3)
+    {
+        // Wood3 uses row 7 of the texture atlas.
+        textureRow = 7;
+
+        durability = 2.0f;
+
+        dropItem =
+            ItemType::Wood3Block;
+    }
+    else if (type == BlockType::Wood4)
+    {
+        // Wood4 uses row 8 of the texture atlas.
+        textureRow = 8;
+
+        durability = 2.0f;
+
+        dropItem =
+            ItemType::Wood4Block;
+    }
+    else if (type == BlockType::YellowFlower)
+    {
+        // YellowFlower uses row 9 of the texture atlas.
+        textureRow = 9;
+
+        durability = 0.5f;
+
+        // Yellow flowers drop a grass block when broken.
+        dropItem =
+            ItemType::GrassBlock;
+    }
+    else if (type == BlockType::RedFlower)
+    {
+        // RedFlower uses row 10 of the texture atlas.
+        textureRow = 10;
+
+        durability = 0.5f;
+
+        // Red flowers drop a grass block when broken.
+        dropItem =
+            ItemType::GrassBlock;
+    }
+    else if (type == BlockType::BlueFlower)
+    {
+        // BlueFlower uses row 11 of the texture atlas.
+        textureRow = 11;
+
+        durability = 0.5f;
+
+        // Blue flowers drop a grass block when broken.
+        dropItem =
+            ItemType::GrassBlock;
     }
 }
 

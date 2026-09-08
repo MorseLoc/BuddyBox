@@ -39,6 +39,7 @@ add_executable(BuddyBox
     "DroppedItem.h"
     "lighting.cpp"
     "lighting.h"
+    "InventoryLayout.h"
 )
 
 configure_file(

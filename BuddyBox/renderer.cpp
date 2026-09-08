@@ -456,7 +456,7 @@ Renderer::Renderer()
         // 15 light -> 100% brightness
         // ----------------------------------------------------
 
-        "        float brightness = 0.15 + (lightLevel * 0.85);\n"
+        "        float brightness = 0.08 + (lightLevel * 0.92);\n"
 
 
         "        finalColor = vec4(\n"

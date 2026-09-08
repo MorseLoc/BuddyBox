@@ -14,59 +14,29 @@ struct World;
 // ============================================================
 // LightChunk
 //
-// Stores lighting for one 16 x 16 x 16 world chunk.
-//
-// Lighting exists for EVERY world cell,
+// Stores lighting for every cell in one 16 x 16 x 16 chunk,
 // including empty air.
 //
-// Each cell stores:
-//
-// skyLight
-// blockLight
-//
-// Values:
+// Light levels:
 // 0  = dark
 // 15 = fully lit
 // ============================================================
 
 struct LightChunk
 {
-    static const int CHUNK_SIZE =
-        16;
+    static const int CHUNK_SIZE = 16;
 
     static const int CELL_COUNT =
-        CHUNK_SIZE *
-        CHUNK_SIZE *
-        CHUNK_SIZE;
+        CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
+    std::array<std::uint8_t, CELL_COUNT> skyLight;
+    std::array<std::uint8_t, CELL_COUNT> blockLight;
 
-    std::array<
-        std::uint8_t,
-        CELL_COUNT
-    > skyLight;
-
-
-    std::array<
-        std::uint8_t,
-        CELL_COUNT
-    > blockLight;
-
-
-    // --------------------------------------------------------
-    // Constructor
-    //
-    // All lighting starts at zero.
-    // --------------------------------------------------------
-
+    // All cells start dark.
     LightChunk()
     {
-        skyLight.fill(
-            0
-        );
-
-        blockLight.fill(
-            0
-        );
+        skyLight.fill(0);
+        blockLight.fill(0);
     }
 };
 
@@ -74,45 +44,19 @@ struct LightChunk
 // ============================================================
 // Lighting
 //
-// Handles BuddyBox world lighting.
-//
-// Light is stored separately from Blocks.
-//
-// This means empty air can carry light,
-// which is required for proper voxel lighting.
-//
-// The system stores:
-//
-// skyLight
-//     Light originating from the sky.
-//
-// blockLight
-//     Light originating from emissive blocks.
-//
-// Both use values:
-//
-// 0 - 15
+// Stores light separately from world blocks so air can carry it.
 // ============================================================
 
 class Lighting
 {
 public:
+    static const int MAX_LIGHT = 15;
+    static const int CHUNK_SIZE = 16;
+
 
     // --------------------------------------------------------
-    // Light constants
+    // Skylight
     // --------------------------------------------------------
-
-    static const int MAX_LIGHT =
-        15;
-
-
-    static const int CHUNK_SIZE =
-        16;
-
-
-    // ========================================================
-    // Sky light
-    // ========================================================
 
     void setSkyLight(
         int x,
@@ -121,7 +65,6 @@ public:
         int lightLevel
     );
 
-
     int getSkyLight(
         int x,
         int y,
@@ -129,9 +72,11 @@ public:
     ) const;
 
 
-    // ========================================================
+    // --------------------------------------------------------
     // Block light
-    // ========================================================
+    //
+    // Storage for light from future emissive blocks.
+    // --------------------------------------------------------
 
     void setBlockLight(
         int x,
@@ -140,7 +85,6 @@ public:
         int lightLevel
     );
 
-
     int getBlockLight(
         int x,
         int y,
@@ -148,13 +92,11 @@ public:
     ) const;
 
 
-    // ========================================================
+    // --------------------------------------------------------
     // Combined light
-    //
-    // Useful when the renderer just needs the brightest
-    // source at a world cell.
-    // ========================================================
+    // --------------------------------------------------------
 
+    // Return the brighter of skylight and block light.
     int getLight(
         int x,
         int y,
@@ -162,37 +104,24 @@ public:
     ) const;
 
 
-    // ========================================================
+    // --------------------------------------------------------
     // Initial world lighting
-    //
-    // Builds the initial sky lighting for a loaded world.
-    //
-    // This will later:
-    //
-    // 1. Seed direct skylight
-    // 2. Propagate skylight
-    // 3. Seed emissive blocks
-    // 4. Propagate block light
-    // ========================================================
+    // --------------------------------------------------------
 
+    // Calculate skylight for the loaded world.
     void calculateSkyLight(
         const World& world
     );
 
-    // ========================================================
-// Dynamic world lighting
-//
-// Call this AFTER a block has been placed or removed.
-//
-// Updates only lighting affected by that world change.
-//
-// Returns the render chunks whose lighting changed,
-// so BuddyBox only needs to rebuild those chunk meshes.
-// ========================================================
 
-    std::set<
-        std::tuple<int, int, int>
-    > updateBlockChange(
+    // --------------------------------------------------------
+    // Update lighting after a block changes
+    // --------------------------------------------------------
+
+    // Call AFTER placing or removing the block.
+    //
+    // Returns the chunks whose rendered lighting needs updating.
+    std::set<std::tuple<int, int, int>> updateBlockChange(
         const World& world,
         int x,
         int y,
@@ -200,45 +129,32 @@ public:
     );
 
 
-    // ========================================================
-    // Clear lighting
-    //
-    // Intended mainly for loading/rebuilding a world,
-    // not normal block edits.
-    // ========================================================
+    // --------------------------------------------------------
+    // Clear stored lighting
+    // --------------------------------------------------------
 
     void clear();
 
 
 private:
-
-    // ========================================================
-// Solid blocks in each X/Z column
-//
-// Used to determine which air cells have
-// direct access to the sky.
-//
-// Key:
-// x, z
-//
-// Value:
-// all solid Y positions in that column
-// ========================================================
+    // --------------------------------------------------------
+    // Solid blocks in each vertical column
+    //
+    // Key: X, Z
+    // Value: all solid block heights in that column
+    // --------------------------------------------------------
 
     std::map<
         std::pair<int, int>,
         std::set<int>
     > solidColumnHeights;
 
-    // ========================================================
+
+    // --------------------------------------------------------
     // Light chunk storage
     //
-    // Key:
-    // chunkX, chunkY, chunkZ
-    //
-    // Value:
-    // LightChunk containing 4096 world cells.
-    // ========================================================
+    // Key: chunk X, Y, Z
+    // --------------------------------------------------------
 
     std::map<
         std::tuple<int, int, int>,
@@ -246,20 +162,18 @@ private:
     > lightChunks;
 
 
-    // ========================================================
+    // --------------------------------------------------------
     // Coordinate helpers
-    // ========================================================
+    // --------------------------------------------------------
 
     int getChunkCoordinate(
         int worldCoordinate
     ) const;
 
-
     int getLocalCoordinate(
         int worldCoordinate,
         int chunkCoordinate
     ) const;
-
 
     int getCellIndex(
         int localX,
@@ -268,9 +182,9 @@ private:
     ) const;
 
 
-    // ========================================================
+    // --------------------------------------------------------
     // Chunk access
-    // ========================================================
+    // --------------------------------------------------------
 
     LightChunk& getOrCreateLightChunk(
         int chunkX,
@@ -278,50 +192,61 @@ private:
         int chunkZ
     );
 
-
     const LightChunk* findLightChunk(
         int chunkX,
         int chunkY,
         int chunkZ
     ) const;
 
-    // ========================================================
-// Dynamic lighting helpers
-// ========================================================
 
+    // --------------------------------------------------------
+    // Extend lighting into newly built areas
+    // --------------------------------------------------------
+
+    // Initialize direct sunlight in new chunks before
+    // spreading weaker light into their shaded cells.
+    void extendSkyLightArea(
+        const World& world,
+        int x,
+        int y,
+        int z,
+        std::set<std::tuple<int, int, int>>& dirtyChunks
+    );
+
+
+    // --------------------------------------------------------
+    // Dynamic lighting helpers
+    // --------------------------------------------------------
+
+    // Record which chunk meshes sample a changed light cell.
     void addDirtyChunkForCell(
-        std::set<
-        std::tuple<int, int, int>
-        >& dirtyChunks,
+        std::set<std::tuple<int, int, int>>& dirtyChunks,
         int x,
         int y,
         int z
     ) const;
 
-
+    // Spread newly available skylight.
     void propagateSkyLightAddition(
         const World& world,
         int startX,
         int startY,
         int startZ,
-        std::set<
-        std::tuple<int, int, int>
-        >& dirtyChunks
+        std::set<std::tuple<int, int, int>>& dirtyChunks
     );
 
-
+    // Remove invalid light, then restore surviving light paths.
     void propagateSkyLightRemoval(
         const World& world,
         int startX,
         int startY,
         int startZ,
         int oldLight,
-        std::set<
-        std::tuple<int, int, int>
-        >& dirtyChunks
+        std::set<std::tuple<int, int, int>>& dirtyChunks
     );
 
-
+    // Return 15 when the air cell has direct sky access,
+    // otherwise return 0.
     int findDirectSkyLight(
         const World& world,
         int x,
@@ -330,10 +255,11 @@ private:
     ) const;
 
 
-    // ========================================================
+    // --------------------------------------------------------
     // Utility
-    // ========================================================
+    // --------------------------------------------------------
 
+    // Keep light levels between 0 and 15.
     int clampLight(
         int lightLevel
     ) const;

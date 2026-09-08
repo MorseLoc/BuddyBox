@@ -1,6 +1,5 @@
 #include "lighting.h"
-
-#include "World.h"
+#include "world.h"
 
 #include <algorithm>
 #include <map>
@@ -12,7 +11,7 @@
 
 
 // ============================================================
-// Small position type used by the propagation queue
+// Position used by the lighting queue
 // ============================================================
 
 struct LightPosition
@@ -24,68 +23,29 @@ struct LightPosition
 
 
 // ============================================================
-// Get chunk coordinate
-//
-// Converts a world coordinate into a chunk coordinate.
-//
-// This correctly handles negative coordinates.
+// Coordinate helpers
 // ============================================================
 
-int Lighting::getChunkCoordinate(
-    int worldCoordinate
-) const
+int Lighting::getChunkCoordinate(int worldCoordinate) const
 {
     if (worldCoordinate >= 0)
     {
-        return
-            worldCoordinate /
-            CHUNK_SIZE;
+        return worldCoordinate / CHUNK_SIZE;
     }
 
-
-    return
-        (
-            worldCoordinate -
-            (CHUNK_SIZE - 1)
-            )
-        /
-        CHUNK_SIZE;
+    // Round negative coordinates down to the correct chunk.
+    return (worldCoordinate - (CHUNK_SIZE - 1)) / CHUNK_SIZE;
 }
 
-
-// ============================================================
-// Get local coordinate
-//
-// Converts a world coordinate into a position from:
-//
-// 0 - 15
-//
-// inside its chunk.
-// ============================================================
 
 int Lighting::getLocalCoordinate(
     int worldCoordinate,
     int chunkCoordinate
 ) const
 {
-    return
-        worldCoordinate -
-        chunkCoordinate *
-        CHUNK_SIZE;
+    return worldCoordinate - chunkCoordinate * CHUNK_SIZE;
 }
 
-
-// ============================================================
-// Get cell index
-//
-// Converts:
-//
-// localX
-// localY
-// localZ
-//
-// into one index inside the 4096-cell arrays.
-// ============================================================
 
 int Lighting::getCellIndex(
     int localX,
@@ -93,46 +53,30 @@ int Lighting::getCellIndex(
     int localZ
 ) const
 {
-    return
-        localX +
-        (
-            localZ *
-            CHUNK_SIZE
-            ) +
-        (
-            localY *
-            CHUNK_SIZE *
-            CHUNK_SIZE
-            );
+    return localX
+        + localZ * CHUNK_SIZE
+        + localY * CHUNK_SIZE * CHUNK_SIZE;
 }
 
 
-// ============================================================
-// Clamp light
-// ============================================================
-
-int Lighting::clampLight(
-    int lightLevel
-) const
+int Lighting::clampLight(int lightLevel) const
 {
     if (lightLevel < 0)
     {
         return 0;
     }
 
-
     if (lightLevel > MAX_LIGHT)
     {
         return MAX_LIGHT;
     }
-
 
     return lightLevel;
 }
 
 
 // ============================================================
-// Get or create light chunk
+// Light chunk access
 // ============================================================
 
 LightChunk& Lighting::getOrCreateLightChunk(
@@ -141,24 +85,11 @@ LightChunk& Lighting::getOrCreateLightChunk(
     int chunkZ
 )
 {
-    return
-        lightChunks[
-            std::make_tuple(
-                chunkX,
-                chunkY,
-                chunkZ
-            )
-        ];
+    return lightChunks[
+        std::make_tuple(chunkX, chunkY, chunkZ)
+    ];
 }
 
-
-// ============================================================
-// Find light chunk
-//
-// Does NOT create a chunk.
-//
-// Returns nullptr when the chunk has no stored lighting.
-// ============================================================
 
 const LightChunk* Lighting::findLightChunk(
     int chunkX,
@@ -166,32 +97,21 @@ const LightChunk* Lighting::findLightChunk(
     int chunkZ
 ) const
 {
-    auto iterator =
-        lightChunks.find(
-            std::make_tuple(
-                chunkX,
-                chunkY,
-                chunkZ
-            )
-        );
+    auto iterator = lightChunks.find(
+        std::make_tuple(chunkX, chunkY, chunkZ)
+    );
 
-
-    if (
-        iterator ==
-        lightChunks.end()
-        )
+    if (iterator == lightChunks.end())
     {
         return nullptr;
     }
 
-
-    return
-        &iterator->second;
+    return &iterator->second;
 }
 
 
 // ============================================================
-// Set sky light
+// Skylight storage
 // ============================================================
 
 void Lighting::setSkyLight(
@@ -201,63 +121,24 @@ void Lighting::setSkyLight(
     int lightLevel
 )
 {
-    int chunkX =
-        getChunkCoordinate(x);
+    int chunkX = getChunkCoordinate(x);
+    int chunkY = getChunkCoordinate(y);
+    int chunkZ = getChunkCoordinate(z);
 
-    int chunkY =
-        getChunkCoordinate(y);
+    int localX = getLocalCoordinate(x, chunkX);
+    int localY = getLocalCoordinate(y, chunkY);
+    int localZ = getLocalCoordinate(z, chunkZ);
 
-    int chunkZ =
-        getChunkCoordinate(z);
+    int index = getCellIndex(localX, localY, localZ);
 
-
-    int localX =
-        getLocalCoordinate(
-            x,
-            chunkX
-        );
-
-    int localY =
-        getLocalCoordinate(
-            y,
-            chunkY
-        );
-
-    int localZ =
-        getLocalCoordinate(
-            z,
-            chunkZ
-        );
-
-
-    int index =
-        getCellIndex(
-            localX,
-            localY,
-            localZ
-        );
-
-
-    LightChunk& lightChunk =
-        getOrCreateLightChunk(
-            chunkX,
-            chunkY,
-            chunkZ
-        );
-
+    LightChunk& lightChunk = getOrCreateLightChunk(
+        chunkX, chunkY, chunkZ
+    );
 
     lightChunk.skyLight[index] =
-        static_cast<std::uint8_t>(
-            clampLight(
-                lightLevel
-            )
-            );
+        static_cast<std::uint8_t>(clampLight(lightLevel));
 }
 
-
-// ============================================================
-// Get sky light
-// ============================================================
 
 int Lighting::getSkyLight(
     int x,
@@ -265,69 +146,31 @@ int Lighting::getSkyLight(
     int z
 ) const
 {
-    int chunkX =
-        getChunkCoordinate(x);
+    int chunkX = getChunkCoordinate(x);
+    int chunkY = getChunkCoordinate(y);
+    int chunkZ = getChunkCoordinate(z);
 
-    int chunkY =
-        getChunkCoordinate(y);
-
-    int chunkZ =
-        getChunkCoordinate(z);
-
-
-    const LightChunk* lightChunk =
-        findLightChunk(
-            chunkX,
-            chunkY,
-            chunkZ
-        );
-
+    const LightChunk* lightChunk = findLightChunk(
+        chunkX, chunkY, chunkZ
+    );
 
     if (lightChunk == nullptr)
     {
         return 0;
     }
 
+    int localX = getLocalCoordinate(x, chunkX);
+    int localY = getLocalCoordinate(y, chunkY);
+    int localZ = getLocalCoordinate(z, chunkZ);
 
-    int localX =
-        getLocalCoordinate(
-            x,
-            chunkX
-        );
+    int index = getCellIndex(localX, localY, localZ);
 
-    int localY =
-        getLocalCoordinate(
-            y,
-            chunkY
-        );
-
-    int localZ =
-        getLocalCoordinate(
-            z,
-            chunkZ
-        );
-
-
-    int index =
-        getCellIndex(
-            localX,
-            localY,
-            localZ
-        );
-
-
-    return
-        static_cast<int>(
-            lightChunk->skyLight[index]
-            );
+    return static_cast<int>(lightChunk->skyLight[index]);
 }
 
 
 // ============================================================
-// Set block light
-//
-// This channel will be used by torches,
-// glowing blocks, furnaces, etc.
+// Block light storage
 // ============================================================
 
 void Lighting::setBlockLight(
@@ -337,63 +180,24 @@ void Lighting::setBlockLight(
     int lightLevel
 )
 {
-    int chunkX =
-        getChunkCoordinate(x);
+    int chunkX = getChunkCoordinate(x);
+    int chunkY = getChunkCoordinate(y);
+    int chunkZ = getChunkCoordinate(z);
 
-    int chunkY =
-        getChunkCoordinate(y);
+    int localX = getLocalCoordinate(x, chunkX);
+    int localY = getLocalCoordinate(y, chunkY);
+    int localZ = getLocalCoordinate(z, chunkZ);
 
-    int chunkZ =
-        getChunkCoordinate(z);
+    int index = getCellIndex(localX, localY, localZ);
 
-
-    int localX =
-        getLocalCoordinate(
-            x,
-            chunkX
-        );
-
-    int localY =
-        getLocalCoordinate(
-            y,
-            chunkY
-        );
-
-    int localZ =
-        getLocalCoordinate(
-            z,
-            chunkZ
-        );
-
-
-    int index =
-        getCellIndex(
-            localX,
-            localY,
-            localZ
-        );
-
-
-    LightChunk& lightChunk =
-        getOrCreateLightChunk(
-            chunkX,
-            chunkY,
-            chunkZ
-        );
-
+    LightChunk& lightChunk = getOrCreateLightChunk(
+        chunkX, chunkY, chunkZ
+    );
 
     lightChunk.blockLight[index] =
-        static_cast<std::uint8_t>(
-            clampLight(
-                lightLevel
-            )
-            );
+        static_cast<std::uint8_t>(clampLight(lightLevel));
 }
 
-
-// ============================================================
-// Get block light
-// ============================================================
 
 int Lighting::getBlockLight(
     int x,
@@ -401,67 +205,28 @@ int Lighting::getBlockLight(
     int z
 ) const
 {
-    int chunkX =
-        getChunkCoordinate(x);
+    int chunkX = getChunkCoordinate(x);
+    int chunkY = getChunkCoordinate(y);
+    int chunkZ = getChunkCoordinate(z);
 
-    int chunkY =
-        getChunkCoordinate(y);
-
-    int chunkZ =
-        getChunkCoordinate(z);
-
-
-    const LightChunk* lightChunk =
-        findLightChunk(
-            chunkX,
-            chunkY,
-            chunkZ
-        );
-
+    const LightChunk* lightChunk = findLightChunk(
+        chunkX, chunkY, chunkZ
+    );
 
     if (lightChunk == nullptr)
     {
         return 0;
     }
 
+    int localX = getLocalCoordinate(x, chunkX);
+    int localY = getLocalCoordinate(y, chunkY);
+    int localZ = getLocalCoordinate(z, chunkZ);
 
-    int localX =
-        getLocalCoordinate(
-            x,
-            chunkX
-        );
+    int index = getCellIndex(localX, localY, localZ);
 
-    int localY =
-        getLocalCoordinate(
-            y,
-            chunkY
-        );
-
-    int localZ =
-        getLocalCoordinate(
-            z,
-            chunkZ
-        );
-
-
-    int index =
-        getCellIndex(
-            localX,
-            localY,
-            localZ
-        );
-
-
-    return
-        static_cast<int>(
-            lightChunk->blockLight[index]
-            );
+    return static_cast<int>(lightChunk->blockLight[index]);
 }
 
-
-// ============================================================
-// Get combined light
-// ============================================================
 
 int Lighting::getLight(
     int x,
@@ -469,230 +234,85 @@ int Lighting::getLight(
     int z
 ) const
 {
-    return
-        std::max(
-            getSkyLight(
-                x,
-                y,
-                z
-            ),
-            getBlockLight(
-                x,
-                y,
-                z
-            )
-        );
+    return std::max(
+        getSkyLight(x, y, z),
+        getBlockLight(x, y, z)
+    );
 }
 
-
-// ============================================================
-// Clear
-// ============================================================
 
 void Lighting::clear()
 {
     lightChunks.clear();
-
     solidColumnHeights.clear();
 }
 
 
 // ============================================================
-// Calculate sky light
-//
-// Creates the initial lighting state for a loaded world.
-//
-// IMPORTANT:
-//
-// Light is stored in AIR CELLS.
-//
-// Direct sky:
-//
-// 15
-// 15
-// 15
-// ██ block
-//
-// Light entering underneath roofs / caves:
-//
-// 15 -> 14 -> 13 -> 12 -> ...
-//
-// We operate on chunks containing world blocks plus a
-// one-chunk border.
-//
-// One chunk is 16 cells wide and light only travels
-// a maximum of 15 cells, so this border contains every
-// cell that the current world geometry can illuminate.
+// Calculate the world's initial skylight
 // ============================================================
 
-void Lighting::calculateSkyLight(
-    const World& world
-)
+void Lighting::calculateSkyLight(const World& world)
 {
     clear();
-
 
     if (world.blocks.empty())
     {
         return;
     }
 
+    std::map<std::pair<int, int>, int> highestSolidBlock;
+    std::set<std::tuple<int, int, int>> worldChunks;
 
-    // ========================================================
-    // 1. Find the highest solid block in each X/Z column
-    // ========================================================
-
-    std::map<
-        std::pair<int, int>,
-        int
-    > highestSolidBlock;
-
-
-    // ========================================================
-    // 2. Find chunks containing world geometry
-    // ========================================================
-
-    std::set<
-        std::tuple<int, int, int>
-    > worldChunks;
-
-
+    // Find occupied chunks and solid block heights.
     for (const auto& entry : world.blocks)
     {
-        int x =
-            std::get<0>(
-                entry.first
-            );
+        int x = std::get<0>(entry.first);
+        int y = std::get<1>(entry.first);
+        int z = std::get<2>(entry.first);
 
-        int y =
-            std::get<1>(
-                entry.first
-            );
-
-        int z =
-            std::get<2>(
-                entry.first
-            );
-
-
-        int chunkX =
-            getChunkCoordinate(x);
-
-        int chunkY =
-            getChunkCoordinate(y);
-
-        int chunkZ =
-            getChunkCoordinate(z);
-
+        int chunkX = getChunkCoordinate(x);
+        int chunkY = getChunkCoordinate(y);
+        int chunkZ = getChunkCoordinate(z);
 
         worldChunks.insert(
-            std::make_tuple(
-                chunkX,
-                chunkY,
-                chunkZ
-            )
+            std::make_tuple(chunkX, chunkY, chunkZ)
         );
-
-
-        // ----------------------------------------------------
-        // Only solid blocks stop direct sunlight.
-        // ----------------------------------------------------
 
         if (!entry.second.solid)
         {
             continue;
         }
 
-        solidColumnHeights[
-            std::make_pair(
-                x,
-                z
-            )
-        ].insert(
-            y
-        );
+        solidColumnHeights[std::make_pair(x, z)].insert(y);
 
-        std::pair<int, int> column =
-            std::make_pair(
-                x,
-                z
-            );
+        std::pair<int, int> column = std::make_pair(x, z);
+        auto highestIterator = highestSolidBlock.find(column);
 
-
-        auto highestIterator =
-            highestSolidBlock.find(
-                column
-            );
-
-
-        if (
-            highestIterator ==
-            highestSolidBlock.end()
-            )
+        if (highestIterator == highestSolidBlock.end())
         {
-            highestSolidBlock[column] =
-                y;
+            highestSolidBlock[column] = y;
         }
-        else if (
-            y >
-            highestIterator->second
-            )
+        else if (y > highestIterator->second)
         {
-            highestIterator->second =
-                y;
+            highestIterator->second = y;
         }
     }
 
-
-    // ========================================================
-    // 3. Build the set of chunks that lighting may use
-    //
-    // Light can travel at most 15 cells.
-    //
-    // Since one chunk is 16 cells wide,
-    // one surrounding chunk is enough.
-    // ========================================================
-
-    std::set<
-        std::tuple<int, int, int>
-    > lightingChunks;
-
+    // Include one chunk of surrounding air in every direction.
+    std::set<std::tuple<int, int, int>> lightingChunks;
 
     for (const auto& chunkPosition : worldChunks)
     {
-        int chunkX =
-            std::get<0>(
-                chunkPosition
-            );
+        int chunkX = std::get<0>(chunkPosition);
+        int chunkY = std::get<1>(chunkPosition);
+        int chunkZ = std::get<2>(chunkPosition);
 
-        int chunkY =
-            std::get<1>(
-                chunkPosition
-            );
-
-        int chunkZ =
-            std::get<2>(
-                chunkPosition
-            );
-
-
-        for (
-            int offsetX = -1;
-            offsetX <= 1;
-            offsetX++
-            )
+        for (int offsetX = -1; offsetX <= 1; offsetX++)
         {
-            for (
-                int offsetY = -1;
-                offsetY <= 1;
-                offsetY++
-                )
+            for (int offsetY = -1; offsetY <= 1; offsetY++)
             {
-                for (
-                    int offsetZ = -1;
-                    offsetZ <= 1;
-                    offsetZ++
-                    )
+                for (int offsetZ = -1; offsetZ <= 1; offsetZ++)
                 {
                     lightingChunks.insert(
                         std::make_tuple(
@@ -706,657 +326,262 @@ void Lighting::calculateSkyLight(
         }
     }
 
-
-    // --------------------------------------------------------
-    // Helper:
-    //
-    // Returns true when a world position belongs to one of
-    // the chunks currently participating in lighting.
-    // --------------------------------------------------------
-
-    auto isInsideLightingArea =
-        [&](int x, int y, int z)
+    auto isInsideLightingArea = [&](int x, int y, int z)
         {
-            int chunkX =
-                getChunkCoordinate(x);
-
-            int chunkY =
-                getChunkCoordinate(y);
-
-            int chunkZ =
-                getChunkCoordinate(z);
-
-
-            return
-                lightingChunks.find(
-                    std::make_tuple(
-                        chunkX,
-                        chunkY,
-                        chunkZ
-                    )
+            return lightingChunks.find(
+                std::make_tuple(
+                    getChunkCoordinate(x),
+                    getChunkCoordinate(y),
+                    getChunkCoordinate(z)
                 )
-                !=
-                lightingChunks.end();
+            ) != lightingChunks.end();
         };
 
-
-    // ========================================================
-    // 4. Seed direct skylight
-    //
-    // Every empty cell with no solid block above it
-    // receives sky light 15.
-    // ========================================================
+    // --------------------------------------------------------
+    // Seed direct sunlight
+    // --------------------------------------------------------
 
     for (const auto& chunkPosition : lightingChunks)
     {
-        int chunkX =
-            std::get<0>(
-                chunkPosition
-            );
+        int startX = std::get<0>(chunkPosition) * CHUNK_SIZE;
+        int startY = std::get<1>(chunkPosition) * CHUNK_SIZE;
+        int startZ = std::get<2>(chunkPosition) * CHUNK_SIZE;
 
-        int chunkY =
-            std::get<1>(
-                chunkPosition
-            );
-
-        int chunkZ =
-            std::get<2>(
-                chunkPosition
-            );
-
-
-        int startX =
-            chunkX *
-            CHUNK_SIZE;
-
-        int startY =
-            chunkY *
-            CHUNK_SIZE;
-
-        int startZ =
-            chunkZ *
-            CHUNK_SIZE;
-
-
-        for (
-            int localX = 0;
-            localX < CHUNK_SIZE;
-            localX++
-            )
+        for (int localX = 0; localX < CHUNK_SIZE; localX++)
         {
-            int x =
-                startX +
-                localX;
+            int x = startX + localX;
 
-
-            for (
-                int localZ = 0;
-                localZ < CHUNK_SIZE;
-                localZ++
-                )
+            for (int localZ = 0; localZ < CHUNK_SIZE; localZ++)
             {
-                int z =
-                    startZ +
-                    localZ;
+                int z = startZ + localZ;
 
-
-                std::pair<int, int> column =
-                    std::make_pair(
-                        x,
-                        z
-                    );
-
-
-                auto highestIterator =
-                    highestSolidBlock.find(
-                        column
-                    );
-
+                auto highestIterator = highestSolidBlock.find(
+                    std::make_pair(x, z)
+                );
 
                 bool columnHasSolidBlock =
-                    highestIterator !=
-                    highestSolidBlock.end();
+                    highestIterator != highestSolidBlock.end();
 
-
-                int highestY =
-                    0;
-
+                int highestY = 0;
 
                 if (columnHasSolidBlock)
                 {
-                    highestY =
-                        highestIterator->second;
+                    highestY = highestIterator->second;
                 }
 
-
-                for (
-                    int localY = 0;
-                    localY < CHUNK_SIZE;
-                    localY++
-                    )
+                for (int localY = 0; localY < CHUNK_SIZE; localY++)
                 {
-                    int y =
-                        startY +
-                        localY;
+                    int y = startY + localY;
 
-
-                    // Solid cells do not carry skylight.
-
-                    if (
-                        world.isSolidAt(
-                            x,
-                            y,
-                            z
-                        )
-                        )
+                    if (world.isSolidAt(x, y, z))
                     {
                         continue;
                     }
-
-
-                    // No solid block exists anywhere
-                    // above or below in this column.
 
                     if (!columnHasSolidBlock)
                     {
-                        setSkyLight(
-                            x,
-                            y,
-                            z,
-                            MAX_LIGHT
-                        );
-
+                        setSkyLight(x, y, z, MAX_LIGHT);
                         continue;
                     }
 
-
-                    // This air cell is above the highest
-                    // solid block and therefore sees sky.
-
                     if (y > highestY)
                     {
-                        setSkyLight(
-                            x,
-                            y,
-                            z,
-                            MAX_LIGHT
-                        );
+                        setSkyLight(x, y, z, MAX_LIGHT);
                     }
                 }
             }
         }
     }
 
+    // --------------------------------------------------------
+    // Find bright cells beside darker air
+    // --------------------------------------------------------
 
-    // ========================================================
-    // 5. Find skylight propagation frontiers
-    //
-    // We do NOT put every sky-lit cell into the queue.
-    //
-    // Only full-light cells next to a darker air cell need
-    // to begin propagation.
-    //
-    // This keeps the queue much smaller.
-    // ========================================================
-
-    std::queue<
-        LightPosition
-    > propagationQueue;
-
+    std::queue<LightPosition> propagationQueue;
 
     const int neighborOffsets[6][3] =
     {
-        {  1,  0,  0 },
-        { -1,  0,  0 },
-        {  0,  1,  0 },
-        {  0, -1,  0 },
-        {  0,  0,  1 },
-        {  0,  0, -1 }
+        { 1, 0, 0 },
+        {-1, 0, 0 },
+        { 0, 1, 0 },
+        { 0,-1, 0 },
+        { 0, 0, 1 },
+        { 0, 0,-1 }
     };
-
 
     for (const auto& chunkPosition : lightingChunks)
     {
-        int chunkX =
-            std::get<0>(
-                chunkPosition
-            );
+        int startX = std::get<0>(chunkPosition) * CHUNK_SIZE;
+        int startY = std::get<1>(chunkPosition) * CHUNK_SIZE;
+        int startZ = std::get<2>(chunkPosition) * CHUNK_SIZE;
 
-        int chunkY =
-            std::get<1>(
-                chunkPosition
-            );
-
-        int chunkZ =
-            std::get<2>(
-                chunkPosition
-            );
-
-
-        int startX =
-            chunkX *
-            CHUNK_SIZE;
-
-        int startY =
-            chunkY *
-            CHUNK_SIZE;
-
-        int startZ =
-            chunkZ *
-            CHUNK_SIZE;
-
-
-        for (
-            int localX = 0;
-            localX < CHUNK_SIZE;
-            localX++
-            )
+        for (int localX = 0; localX < CHUNK_SIZE; localX++)
         {
-            for (
-                int localY = 0;
-                localY < CHUNK_SIZE;
-                localY++
-                )
+            for (int localY = 0; localY < CHUNK_SIZE; localY++)
             {
-                for (
-                    int localZ = 0;
-                    localZ < CHUNK_SIZE;
-                    localZ++
-                    )
+                for (int localZ = 0; localZ < CHUNK_SIZE; localZ++)
                 {
-                    int x =
-                        startX +
-                        localX;
+                    int x = startX + localX;
+                    int y = startY + localY;
+                    int z = startZ + localZ;
 
-                    int y =
-                        startY +
-                        localY;
-
-                    int z =
-                        startZ +
-                        localZ;
-
-
-                    if (
-                        getSkyLight(
-                            x,
-                            y,
-                            z
-                        )
-                        !=
-                        MAX_LIGHT
-                        )
+                    if (getSkyLight(x, y, z) != MAX_LIGHT)
                     {
                         continue;
                     }
 
+                    bool touchesDarkAir = false;
 
-                    bool touchesDarkAir =
-                        false;
-
-
-                    for (
-                        int neighbor = 0;
-                        neighbor < 6;
-                        neighbor++
-                        )
+                    for (int neighbor = 0; neighbor < 6; neighbor++)
                     {
-                        int neighborX =
-                            x +
-                            neighborOffsets[neighbor][0];
+                        int nx = x + neighborOffsets[neighbor][0];
+                        int ny = y + neighborOffsets[neighbor][1];
+                        int nz = z + neighborOffsets[neighbor][2];
 
-                        int neighborY =
-                            y +
-                            neighborOffsets[neighbor][1];
-
-                        int neighborZ =
-                            z +
-                            neighborOffsets[neighbor][2];
-
-
-                        if (
-                            !isInsideLightingArea(
-                                neighborX,
-                                neighborY,
-                                neighborZ
-                            )
-                            )
+                        if (!isInsideLightingArea(nx, ny, nz))
                         {
                             continue;
                         }
 
-
-                        if (
-                            world.isSolidAt(
-                                neighborX,
-                                neighborY,
-                                neighborZ
-                            )
-                            )
+                        if (world.isSolidAt(nx, ny, nz))
                         {
                             continue;
                         }
 
-
-                        if (
-                            getSkyLight(
-                                neighborX,
-                                neighborY,
-                                neighborZ
-                            )
-                            <
-                            MAX_LIGHT - 1
-                            )
+                        if (getSkyLight(nx, ny, nz) < MAX_LIGHT - 1)
                         {
-                            touchesDarkAir =
-                                true;
-
+                            touchesDarkAir = true;
                             break;
                         }
                     }
 
-
                     if (touchesDarkAir)
                     {
-                        propagationQueue.push(
-                            {
-                                x,
-                                y,
-                                z
-                            }
-                        );
+                        propagationQueue.push({ x, y, z });
                     }
                 }
             }
         }
     }
 
-
-    // ========================================================
-    // 6. Propagate skylight
-    //
-    // Example:
-    //
-    // 15 -> 14 -> 13 -> 12 -> ...
-    //
-    // Solid blocks stop propagation.
-    // ========================================================
+    // --------------------------------------------------------
+    // Spread sunlight into shaded air
+    // --------------------------------------------------------
 
     while (!propagationQueue.empty())
     {
-        LightPosition current =
-            propagationQueue.front();
-
+        LightPosition current = propagationQueue.front();
         propagationQueue.pop();
 
-
-        int currentLight =
-            getSkyLight(
-                current.x,
-                current.y,
-                current.z
-            );
-
+        int currentLight = getSkyLight(
+            current.x, current.y, current.z
+        );
 
         if (currentLight <= 1)
         {
             continue;
         }
 
+        int nextLight = currentLight - 1;
 
-        int nextLight =
-            currentLight - 1;
-
-
-        for (
-            int neighbor = 0;
-            neighbor < 6;
-            neighbor++
-            )
+        for (int neighbor = 0; neighbor < 6; neighbor++)
         {
-            int neighborX =
-                current.x +
-                neighborOffsets[neighbor][0];
+            int nx = current.x + neighborOffsets[neighbor][0];
+            int ny = current.y + neighborOffsets[neighbor][1];
+            int nz = current.z + neighborOffsets[neighbor][2];
 
-            int neighborY =
-                current.y +
-                neighborOffsets[neighbor][1];
-
-            int neighborZ =
-                current.z +
-                neighborOffsets[neighbor][2];
-
-
-            // Do not create lighting endlessly
-            // outside currently loaded world chunks.
-
-            if (
-                !isInsideLightingArea(
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                )
-                )
+            if (!isInsideLightingArea(nx, ny, nz))
             {
                 continue;
             }
 
-
-            // Light cannot travel through solid blocks.
-
-            if (
-                world.isSolidAt(
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                )
-                )
+            if (world.isSolidAt(nx, ny, nz))
             {
                 continue;
             }
 
-
-            int existingLight =
-                getSkyLight(
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                );
-
-
-            if (
-                existingLight >=
-                nextLight
-                )
+            if (getSkyLight(nx, ny, nz) >= nextLight)
             {
                 continue;
             }
 
-
-            setSkyLight(
-                neighborX,
-                neighborY,
-                neighborZ,
-                nextLight
-            );
-
-
-            propagationQueue.push(
-                {
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                }
-            );
+            setSkyLight(nx, ny, nz, nextLight);
+            propagationQueue.push({ nx, ny, nz });
         }
     }
 }
 
+
 // ============================================================
-// Add dirty chunk for light cell
-//
-// A lighting cell can affect a block face in its own chunk.
-//
-// If the cell sits on a chunk boundary, a face belonging to
-// the neighboring chunk may also be sampling this light cell.
+// Record meshes affected by a changed light cell
 // ============================================================
 
 void Lighting::addDirtyChunkForCell(
-    std::set<
-    std::tuple<int, int, int>
-    >& dirtyChunks,
+    std::set<std::tuple<int, int, int>>& dirtyChunks,
     int x,
     int y,
     int z
 ) const
 {
-    int chunkX =
-        getChunkCoordinate(
-            x
-        );
+    int chunkX = getChunkCoordinate(x);
+    int chunkY = getChunkCoordinate(y);
+    int chunkZ = getChunkCoordinate(z);
 
-    int chunkY =
-        getChunkCoordinate(
-            y
-        );
-
-    int chunkZ =
-        getChunkCoordinate(
-            z
-        );
-
-
-    int localX =
-        getLocalCoordinate(
-            x,
-            chunkX
-        );
-
-    int localY =
-        getLocalCoordinate(
-            y,
-            chunkY
-        );
-
-    int localZ =
-        getLocalCoordinate(
-            z,
-            chunkZ
-        );
-
-
-    // --------------------------------------------------------
-    // Main chunk
-    // --------------------------------------------------------
+    int localX = getLocalCoordinate(x, chunkX);
+    int localY = getLocalCoordinate(y, chunkY);
+    int localZ = getLocalCoordinate(z, chunkZ);
 
     dirtyChunks.insert(
-        std::make_tuple(
-            chunkX,
-            chunkY,
-            chunkZ
-        )
+        std::make_tuple(chunkX, chunkY, chunkZ)
     );
 
-
-    // --------------------------------------------------------
-    // Neighboring chunks
-    //
-    // Only needed when this light cell touches a boundary.
-    // --------------------------------------------------------
-
+    // A neighboring chunk may sample this cell at a shared edge.
     if (localX == 0)
     {
         dirtyChunks.insert(
-            std::make_tuple(
-                chunkX - 1,
-                chunkY,
-                chunkZ
-            )
+            std::make_tuple(chunkX - 1, chunkY, chunkZ)
         );
     }
 
-
-    if (
-        localX ==
-        CHUNK_SIZE - 1
-        )
+    if (localX == CHUNK_SIZE - 1)
     {
         dirtyChunks.insert(
-            std::make_tuple(
-                chunkX + 1,
-                chunkY,
-                chunkZ
-            )
+            std::make_tuple(chunkX + 1, chunkY, chunkZ)
         );
     }
-
 
     if (localY == 0)
     {
         dirtyChunks.insert(
-            std::make_tuple(
-                chunkX,
-                chunkY - 1,
-                chunkZ
-            )
+            std::make_tuple(chunkX, chunkY - 1, chunkZ)
         );
     }
 
-
-    if (
-        localY ==
-        CHUNK_SIZE - 1
-        )
+    if (localY == CHUNK_SIZE - 1)
     {
         dirtyChunks.insert(
-            std::make_tuple(
-                chunkX,
-                chunkY + 1,
-                chunkZ
-            )
+            std::make_tuple(chunkX, chunkY + 1, chunkZ)
         );
     }
-
 
     if (localZ == 0)
     {
         dirtyChunks.insert(
-            std::make_tuple(
-                chunkX,
-                chunkY,
-                chunkZ - 1
-            )
+            std::make_tuple(chunkX, chunkY, chunkZ - 1)
         );
     }
 
-
-    if (
-        localZ ==
-        CHUNK_SIZE - 1
-        )
+    if (localZ == CHUNK_SIZE - 1)
     {
         dirtyChunks.insert(
-            std::make_tuple(
-                chunkX,
-                chunkY,
-                chunkZ + 1
-            )
+            std::make_tuple(chunkX, chunkY, chunkZ + 1)
         );
     }
 }
 
 
 // ============================================================
-// Find direct sky light
-//
-// Returns:
-//
-// 15
-//     air cell has nothing solid above it
-//
-// 0
-//     air cell is underneath a solid block
-//     or the cell itself is solid
+// Check direct access to the sky
 // ============================================================
 
 int Lighting::findDirectSkyLight(
@@ -1366,76 +591,38 @@ int Lighting::findDirectSkyLight(
     int z
 ) const
 {
-    // Solid cells cannot contain light.
-
-    if (
-        world.isSolidAt(
-            x,
-            y,
-            z
-        )
-        )
+    if (world.isSolidAt(x, y, z))
     {
         return 0;
     }
 
+    auto columnIterator = solidColumnHeights.find(
+        std::make_pair(x, z)
+    );
 
-    std::pair<int, int> column =
-        std::make_pair(
-            x,
-            z
-        );
-
-
-    auto columnIterator =
-        solidColumnHeights.find(
-            column
-        );
-
-
-    // No solid blocks exist anywhere in this column.
-
-    if (
-        columnIterator ==
-        solidColumnHeights.end()
-        )
+    if (columnIterator == solidColumnHeights.end())
     {
         return MAX_LIGHT;
     }
 
-
-    if (
-        columnIterator->second.empty()
-        )
+    if (columnIterator->second.empty())
     {
         return MAX_LIGHT;
     }
 
-
-    // Highest solid Y in the column.
-
-    int highestSolidY =
-        *columnIterator->second.rbegin();
-
+    int highestSolidY = *columnIterator->second.rbegin();
 
     if (y > highestSolidY)
     {
         return MAX_LIGHT;
     }
 
-
     return 0;
 }
 
 
 // ============================================================
-// Propagate sky light addition
-//
-// Used when new air appears or new sunlight enters.
-//
-// Light spreads:
-//
-// 15 -> 14 -> 13 -> 12 ...
+// Spread newly available skylight
 // ============================================================
 
 void Lighting::propagateSkyLightAddition(
@@ -1443,22 +630,13 @@ void Lighting::propagateSkyLightAddition(
     int startX,
     int startY,
     int startZ,
-    std::set<
-    std::tuple<int, int, int>
-    >& dirtyChunks
+    std::set<std::tuple<int, int, int>>& dirtyChunks
 )
 {
-    if (
-        world.isSolidAt(
-            startX,
-            startY,
-            startZ
-        )
-        )
+    if (world.isSolidAt(startX, startY, startZ))
     {
         return;
     }
-
 
     struct LightNode
     {
@@ -1467,255 +645,116 @@ void Lighting::propagateSkyLightAddition(
         int z;
     };
 
-
     const int neighborOffsets[6][3] =
     {
-        {  1,  0,  0 },
-        { -1,  0,  0 },
-        {  0,  1,  0 },
-        {  0, -1,  0 },
-        {  0,  0,  1 },
-        {  0,  0, -1 }
+        { 1, 0, 0 },
+        {-1, 0, 0 },
+        { 0, 1, 0 },
+        { 0,-1, 0 },
+        { 0, 0, 1 },
+        { 0, 0,-1 }
     };
 
+    int bestLight = findDirectSkyLight(
+        world, startX, startY, startZ
+    );
 
-    // --------------------------------------------------------
-    // Find how bright the starting cell should be.
-    // --------------------------------------------------------
-
-    int bestLight =
-        findDirectSkyLight(
-            world,
-            startX,
-            startY,
-            startZ
-        );
-
-
-    for (
-        int neighbor = 0;
-        neighbor < 6;
-        neighbor++
-        )
+    // Consider light entering from each neighboring air cell.
+    for (int neighbor = 0; neighbor < 6; neighbor++)
     {
-        int neighborX =
-            startX +
-            neighborOffsets[neighbor][0];
+        int nx = startX + neighborOffsets[neighbor][0];
+        int ny = startY + neighborOffsets[neighbor][1];
+        int nz = startZ + neighborOffsets[neighbor][2];
 
-        int neighborY =
-            startY +
-            neighborOffsets[neighbor][1];
-
-        int neighborZ =
-            startZ +
-            neighborOffsets[neighbor][2];
-
-
-        if (
-            world.isSolidAt(
-                neighborX,
-                neighborY,
-                neighborZ
-            )
-            )
+        if (world.isSolidAt(nx, ny, nz))
         {
             continue;
         }
 
+        int possibleLight = getSkyLight(nx, ny, nz) - 1;
 
-        int neighborLight =
-            getSkyLight(
-                neighborX,
-                neighborY,
-                neighborZ
-            );
-
-
-        int possibleLight =
-            neighborLight - 1;
-
-
-        if (
-            possibleLight >
-            bestLight
-            )
+        if (possibleLight > bestLight)
         {
-            bestLight =
-                possibleLight;
+            bestLight = possibleLight;
         }
     }
 
+    bestLight = clampLight(bestLight);
 
-    bestLight =
-        clampLight(
-            bestLight
-        );
+    int existingStartLight = getSkyLight(
+        startX, startY, startZ
+    );
 
-
-    int existingStartLight =
-        getSkyLight(
-            startX,
-            startY,
-            startZ
-        );
-
-
-    if (
-        bestLight >
-        existingStartLight
-        )
+    if (bestLight > existingStartLight)
     {
-        setSkyLight(
-            startX,
-            startY,
-            startZ,
-            bestLight
-        );
-
+        setSkyLight(startX, startY, startZ, bestLight);
 
         addDirtyChunkForCell(
-            dirtyChunks,
-            startX,
-            startY,
-            startZ
+            dirtyChunks, startX, startY, startZ
         );
     }
-
 
     if (bestLight <= 1)
     {
         return;
     }
 
-
-    // ========================================================
-    // Breadth-first light propagation
-    // ========================================================
-
-    std::queue<
-        LightNode
-    > propagationQueue;
-
-
-    propagationQueue.push(
-        {
-            startX,
-            startY,
-            startZ
-        }
-    );
-
+    std::queue<LightNode> propagationQueue;
+    propagationQueue.push({ startX, startY, startZ });
 
     while (!propagationQueue.empty())
     {
-        LightNode current =
-            propagationQueue.front();
-
+        LightNode current = propagationQueue.front();
         propagationQueue.pop();
 
-
-        int currentLight =
-            getSkyLight(
-                current.x,
-                current.y,
-                current.z
-            );
-
+        int currentLight = getSkyLight(
+            current.x, current.y, current.z
+        );
 
         if (currentLight <= 1)
         {
             continue;
         }
 
+        int nextLight = currentLight - 1;
 
-        int nextLight =
-            currentLight - 1;
-
-
-        for (
-            int neighbor = 0;
-            neighbor < 6;
-            neighbor++
-            )
+        for (int neighbor = 0; neighbor < 6; neighbor++)
         {
-            int neighborX =
-                current.x +
-                neighborOffsets[neighbor][0];
+            int nx = current.x + neighborOffsets[neighbor][0];
+            int ny = current.y + neighborOffsets[neighbor][1];
+            int nz = current.z + neighborOffsets[neighbor][2];
 
-            int neighborY =
-                current.y +
-                neighborOffsets[neighbor][1];
-
-            int neighborZ =
-                current.z +
-                neighborOffsets[neighbor][2];
-
-
-            if (
-                world.isSolidAt(
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                )
-                )
+            if (world.isSolidAt(nx, ny, nz))
             {
                 continue;
             }
 
-
-            int existingLight =
-                getSkyLight(
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                );
-
-
-            if (
-                existingLight >=
-                nextLight
-                )
+            // New regions must initialize their direct sunlight first.
+            if (!findLightChunk(
+                getChunkCoordinate(nx),
+                getChunkCoordinate(ny),
+                getChunkCoordinate(nz)
+            ))
             {
                 continue;
             }
 
+            if (getSkyLight(nx, ny, nz) >= nextLight)
+            {
+                continue;
+            }
 
-            setSkyLight(
-                neighborX,
-                neighborY,
-                neighborZ,
-                nextLight
-            );
+            setSkyLight(nx, ny, nz, nextLight);
+            addDirtyChunkForCell(dirtyChunks, nx, ny, nz);
 
-
-            addDirtyChunkForCell(
-                dirtyChunks,
-                neighborX,
-                neighborY,
-                neighborZ
-            );
-
-
-            propagationQueue.push(
-                {
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                }
-            );
+            propagationQueue.push({ nx, ny, nz });
         }
     }
 }
 
 
 // ============================================================
-// Propagate sky light removal
-//
-// Removes light that depended on a light cell which
-// has disappeared.
-//
-// Surviving light sources are remembered and propagated
-// again afterward.
+// Remove invalid skylight and restore surviving light paths
 // ============================================================
 
 void Lighting::propagateSkyLightRemoval(
@@ -1724,16 +763,13 @@ void Lighting::propagateSkyLightRemoval(
     int startY,
     int startZ,
     int oldLight,
-    std::set<
-    std::tuple<int, int, int>
-    >& dirtyChunks
+    std::set<std::tuple<int, int, int>>& dirtyChunks
 )
 {
     if (oldLight <= 0)
     {
         return;
     }
-
 
     struct RemovalNode
     {
@@ -1743,190 +779,73 @@ void Lighting::propagateSkyLightRemoval(
         int oldLight;
     };
 
-
     const int neighborOffsets[6][3] =
     {
-        {  1,  0,  0 },
-        { -1,  0,  0 },
-        {  0,  1,  0 },
-        {  0, -1,  0 },
-        {  0,  0,  1 },
-        {  0,  0, -1 }
+        { 1, 0, 0 },
+        {-1, 0, 0 },
+        { 0, 1, 0 },
+        { 0,-1, 0 },
+        { 0, 0, 1 },
+        { 0, 0,-1 }
     };
 
+    std::queue<RemovalNode> removalQueue;
+    std::set<std::tuple<int, int, int>> relightCells;
 
-    std::queue<
-        RemovalNode
-    > removalQueue;
-
-
-    std::set<
-        std::tuple<int, int, int>
-    > relightCells;
-
-
-    removalQueue.push(
-        {
-            startX,
-            startY,
-            startZ,
-            oldLight
-        }
-    );
-
+    removalQueue.push({ startX, startY, startZ, oldLight });
 
     while (!removalQueue.empty())
     {
-        RemovalNode current =
-            removalQueue.front();
-
+        RemovalNode current = removalQueue.front();
         removalQueue.pop();
 
-
-        for (
-            int neighbor = 0;
-            neighbor < 6;
-            neighbor++
-            )
+        for (int neighbor = 0; neighbor < 6; neighbor++)
         {
-            int neighborX =
-                current.x +
-                neighborOffsets[neighbor][0];
+            int nx = current.x + neighborOffsets[neighbor][0];
+            int ny = current.y + neighborOffsets[neighbor][1];
+            int nz = current.z + neighborOffsets[neighbor][2];
 
-            int neighborY =
-                current.y +
-                neighborOffsets[neighbor][1];
-
-            int neighborZ =
-                current.z +
-                neighborOffsets[neighbor][2];
-
-
-            if (
-                world.isSolidAt(
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                )
-                )
+            if (world.isSolidAt(nx, ny, nz))
             {
                 continue;
             }
 
-
-            int neighborLight =
-                getSkyLight(
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                );
-
+            int neighborLight = getSkyLight(nx, ny, nz);
 
             if (neighborLight <= 0)
             {
                 continue;
             }
 
-
-            // ------------------------------------------------
             // Direct sunlight is an independent source.
-            //
-            // Never remove it because another light path
-            // disappeared.
-            // ------------------------------------------------
-
-            if (
-                findDirectSkyLight(
-                    world,
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                )
-                ==
-                MAX_LIGHT
-                )
+            if (findDirectSkyLight(world, nx, ny, nz) == MAX_LIGHT)
             {
-                relightCells.insert(
-                    std::make_tuple(
-                        neighborX,
-                        neighborY,
-                        neighborZ
-                    )
-                );
-
+                relightCells.insert(std::make_tuple(nx, ny, nz));
                 continue;
             }
 
-
-            // ------------------------------------------------
-            // A lower light value depended on the brighter
-            // cell that was removed.
-            // ------------------------------------------------
-
-            if (
-                neighborLight <
-                current.oldLight
-                )
+            if (neighborLight < current.oldLight)
             {
-                setSkyLight(
-                    neighborX,
-                    neighborY,
-                    neighborZ,
-                    0
-                );
+                setSkyLight(nx, ny, nz, 0);
+                addDirtyChunkForCell(dirtyChunks, nx, ny, nz);
 
-
-                addDirtyChunkForCell(
-                    dirtyChunks,
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                );
-
-
-                removalQueue.push(
-                    {
-                        neighborX,
-                        neighborY,
-                        neighborZ,
-                        neighborLight
-                    }
-                );
+                removalQueue.push({ nx, ny, nz, neighborLight });
             }
             else
             {
-                // Equal or brighter light survived from
-                // another direction.
-
-                relightCells.insert(
-                    std::make_tuple(
-                        neighborX,
-                        neighborY,
-                        neighborZ
-                    )
-                );
+                // Equal or brighter light may come from another path.
+                relightCells.insert(std::make_tuple(nx, ny, nz));
             }
         }
     }
-
-
-    // ========================================================
-    // Re-spread surviving nearby light.
-    // ========================================================
 
     for (const auto& position : relightCells)
     {
         propagateSkyLightAddition(
             world,
-            std::get<0>(
-                position
-            ),
-            std::get<1>(
-                position
-            ),
-            std::get<2>(
-                position
-            ),
+            std::get<0>(position),
+            std::get<1>(position),
+            std::get<2>(position),
             dirtyChunks
         );
     }
@@ -1934,526 +853,376 @@ void Lighting::propagateSkyLightRemoval(
 
 
 // ============================================================
-// Update block change
+// Update lighting after placing or removing a block
 //
-// Call AFTER World has placed or removed the block.
-//
-// This updates:
-//
-// - direct skylight
-// - propagated skylight
-// - removed skylight
-// - dirty render chunks
-//
-// It does NOT recalculate the entire world.
+// The World must already contain the NEW block state.
 // ============================================================
 
-std::set<
-    std::tuple<int, int, int>
-> Lighting::updateBlockChange(
+std::set<std::tuple<int, int, int>> Lighting::updateBlockChange(
     const World& world,
     int x,
     int y,
     int z
 )
 {
-    std::set<
-        std::tuple<int, int, int>
-    > dirtyChunks;
+    std::set<std::tuple<int, int, int>> dirtyChunks;
+    std::pair<int, int> column = std::make_pair(x, z);
 
+    // The column cache still describes the previous world state.
+    auto oldColumnIterator = solidColumnHeights.find(column);
 
-    std::pair<int, int> column =
-        std::make_pair(
-            x,
-            z
-        );
+    bool wasSolid = false;
+    bool hadOldHighest = false;
+    int oldHighest = 0;
 
-
-    // ========================================================
-    // What did this cell look like BEFORE the world edit?
-    //
-    // The column cache still contains the previous state.
-    // ========================================================
-
-    auto oldColumnIterator =
-        solidColumnHeights.find(
-            column
-        );
-
-
-    bool wasSolid =
-        false;
-
-
-    bool hadOldHighest =
-        false;
-
-
-    int oldHighest =
-        0;
-
-
-    if (
-        oldColumnIterator !=
-        solidColumnHeights.end()
-        )
+    if (oldColumnIterator != solidColumnHeights.end())
     {
         wasSolid =
-            oldColumnIterator->second.find(
-                y
-            )
-            !=
+            oldColumnIterator->second.find(y) !=
             oldColumnIterator->second.end();
 
-
-        if (
-            !oldColumnIterator->second.empty()
-            )
+        if (!oldColumnIterator->second.empty())
         {
-            hadOldHighest =
-                true;
-
-            oldHighest =
-                *oldColumnIterator->second.rbegin();
+            hadOldHighest = true;
+            oldHighest = *oldColumnIterator->second.rbegin();
         }
     }
 
+    int changedCellOldLight = getSkyLight(x, y, z);
+    bool isSolidNow = world.isSolidAt(x, y, z);
 
-    int changedCellOldLight =
-        getSkyLight(
-            x,
-            y,
-            z
-        );
-
-
-    // ========================================================
-    // Update our column cache to match the NEW World state.
-    // ========================================================
-
-    bool isSolidNow =
-        world.isSolidAt(
-            x,
-            y,
-            z
-        );
-
-
+    // Update the cache to describe the new world state.
     if (isSolidNow)
     {
-        solidColumnHeights[
-            column
-        ].insert(
-            y
-        );
+        solidColumnHeights[column].insert(y);
     }
     else
     {
-        auto columnIterator =
-            solidColumnHeights.find(
-                column
-            );
+        auto columnIterator = solidColumnHeights.find(column);
 
-
-        if (
-            columnIterator !=
-            solidColumnHeights.end()
-            )
+        if (columnIterator != solidColumnHeights.end())
         {
-            columnIterator->second.erase(
-                y
-            );
+            columnIterator->second.erase(y);
 
-
-            if (
-                columnIterator->second.empty()
-                )
+            if (columnIterator->second.empty())
             {
-                solidColumnHeights.erase(
-                    columnIterator
-                );
+                solidColumnHeights.erase(columnIterator);
             }
         }
     }
 
+    // Collect already stored cells in the edited column.
+    std::vector<int> columnCells;
 
-    // ========================================================
-    // Find new highest solid block.
-    // ========================================================
-
-    auto newColumnIterator =
-        solidColumnHeights.find(
-            column
-        );
-
-
-    bool hadNewHighest =
-        false;
-
-
-    int newHighest =
-        0;
-
-
-    if (
-        newColumnIterator !=
-        solidColumnHeights.end() &&
-        !newColumnIterator->second.empty()
-        )
-    {
-        hadNewHighest =
-            true;
-
-        newHighest =
-            *newColumnIterator->second.rbegin();
-    }
-
-
-    // ========================================================
-    // Direct sunlight may have changed for multiple cells in
-    // this X/Z column.
-    //
-    // We inspect cells already participating in lighting.
-    // ========================================================
-
-    std::vector<
-        int
-    > columnCells;
-
-
-    int columnChunkX =
-        getChunkCoordinate(
-            x
-        );
-
-    int columnChunkZ =
-        getChunkCoordinate(
-            z
-        );
-
-
-    int localX =
-        getLocalCoordinate(
-            x,
-            columnChunkX
-        );
-
-    int localZ =
-        getLocalCoordinate(
-            z,
-            columnChunkZ
-        );
-
+    int columnChunkX = getChunkCoordinate(x);
+    int columnChunkZ = getChunkCoordinate(z);
 
     for (const auto& chunkEntry : lightChunks)
     {
-        int lightChunkX =
-            std::get<0>(
-                chunkEntry.first
-            );
-
-        int lightChunkY =
-            std::get<1>(
-                chunkEntry.first
-            );
-
-        int lightChunkZ =
-            std::get<2>(
-                chunkEntry.first
-            );
-
+        int lightChunkX = std::get<0>(chunkEntry.first);
+        int lightChunkY = std::get<1>(chunkEntry.first);
+        int lightChunkZ = std::get<2>(chunkEntry.first);
 
         if (
-            lightChunkX !=
-            columnChunkX ||
-            lightChunkZ !=
-            columnChunkZ
+            lightChunkX != columnChunkX ||
+            lightChunkZ != columnChunkZ
             )
         {
             continue;
         }
 
-
-        for (
-            int localY = 0;
-            localY < CHUNK_SIZE;
-            localY++
-            )
+        for (int localY = 0; localY < CHUNK_SIZE; localY++)
         {
-            int worldY =
-                lightChunkY *
-                CHUNK_SIZE +
-                localY;
-
-
             columnCells.push_back(
-                worldY
+                lightChunkY * CHUNK_SIZE + localY
             );
         }
     }
 
-
-    std::map<
-        std::tuple<int, int, int>,
-        int
-    > removalSeeds;
-
-
-    std::set<
-        std::tuple<int, int, int>
-    > additionSeeds;
-
+    std::map<std::tuple<int, int, int>, int> removalSeeds;
+    std::set<std::tuple<int, int, int>> additionSeeds;
 
     for (int cellY : columnCells)
     {
-        // ----------------------------------------------------
-        // Was this cell solid before the edit?
-        // ----------------------------------------------------
-
         bool oldCellSolid;
-
 
         if (cellY == y)
         {
-            oldCellSolid =
-                wasSolid;
+            oldCellSolid = wasSolid;
         }
         else
         {
-            oldCellSolid =
-                world.isSolidAt(
-                    x,
-                    cellY,
-                    z
-                );
+            oldCellSolid = world.isSolidAt(x, cellY, z);
         }
-
 
         bool oldDirectSky =
             !oldCellSolid &&
-            (
-                !hadOldHighest ||
-                cellY > oldHighest
-                );
-
+            (!hadOldHighest || cellY > oldHighest);
 
         bool newDirectSky =
-            findDirectSkyLight(
-                world,
-                x,
-                cellY,
-                z
-            )
-            ==
-            MAX_LIGHT;
+            findDirectSkyLight(world, x, cellY, z) == MAX_LIGHT;
 
-
-        // ----------------------------------------------------
-        // Direct sunlight disappeared.
-        // ----------------------------------------------------
-
-        if (
-            oldDirectSky &&
-            !newDirectSky
-            )
+        // Sunlight was blocked.
+        if (oldDirectSky && !newDirectSky)
         {
-            int oldLight =
-                getSkyLight(
-                    x,
-                    cellY,
-                    z
-                );
-
+            int oldLight = getSkyLight(x, cellY, z);
 
             if (oldLight > 0)
             {
-                setSkyLight(
-                    x,
-                    cellY,
-                    z,
-                    0
-                );
+                setSkyLight(x, cellY, z, 0);
+                addDirtyChunkForCell(dirtyChunks, x, cellY, z);
 
-
-                addDirtyChunkForCell(
-                    dirtyChunks,
-                    x,
-                    cellY,
-                    z
-                );
-
-
-                removalSeeds[
-                    std::make_tuple(
-                        x,
-                        cellY,
-                        z
-                    )
-                ] =
+                removalSeeds[std::make_tuple(x, cellY, z)] =
                     oldLight;
             }
         }
 
-
-        // ----------------------------------------------------
-        // Direct sunlight appeared.
-        // ----------------------------------------------------
-
-        if (
-            !oldDirectSky &&
-            newDirectSky
-            )
+        // Direct sunlight became available.
+        if (!oldDirectSky && newDirectSky)
         {
-            int existingLight =
-                getSkyLight(
-                    x,
-                    cellY,
-                    z
-                );
-
-
-            if (
-                existingLight <
-                MAX_LIGHT
-                )
+            if (getSkyLight(x, cellY, z) < MAX_LIGHT)
             {
-                setSkyLight(
-                    x,
-                    cellY,
-                    z,
-                    MAX_LIGHT
-                );
-
-
-                addDirtyChunkForCell(
-                    dirtyChunks,
-                    x,
-                    cellY,
-                    z
-                );
+                setSkyLight(x, cellY, z, MAX_LIGHT);
+                addDirtyChunkForCell(dirtyChunks, x, cellY, z);
             }
 
-
-            additionSeeds.insert(
-                std::make_tuple(
-                    x,
-                    cellY,
-                    z
-                )
-            );
+            additionSeeds.insert(std::make_tuple(x, cellY, z));
         }
     }
 
-
-    // ========================================================
-    // Block was placed.
-    //
-    // The cell can no longer contain light.
-    // ========================================================
-
-    if (
-        !wasSolid &&
-        isSolidNow
-        )
+    // A newly placed solid block cannot contain skylight.
+    if (!wasSolid && isSolidNow)
     {
         if (changedCellOldLight > 0)
         {
-            setSkyLight(
-                x,
-                y,
-                z,
-                0
-            );
+            setSkyLight(x, y, z, 0);
+            addDirtyChunkForCell(dirtyChunks, x, y, z);
 
-
-            addDirtyChunkForCell(
-                dirtyChunks,
-                x,
-                y,
-                z
-            );
-
-
-            removalSeeds[
-                std::make_tuple(
-                    x,
-                    y,
-                    z
-                )
-            ] =
+            removalSeeds[std::make_tuple(x, y, z)] =
                 changedCellOldLight;
         }
     }
-
-
-    // ========================================================
-    // Process light removal.
-    // ========================================================
 
     for (const auto& removal : removalSeeds)
     {
         propagateSkyLightRemoval(
             world,
-            std::get<0>(
-                removal.first
-            ),
-            std::get<1>(
-                removal.first
-            ),
-            std::get<2>(
-                removal.first
-            ),
+            std::get<0>(removal.first),
+            std::get<1>(removal.first),
+            std::get<2>(removal.first),
             removal.second,
             dirtyChunks
         );
     }
 
-
-    // ========================================================
-    // Block was removed.
-    //
-    // The newly created air cell can now receive light from:
-    //
-    // - direct sky
-    // - neighboring propagated skylight
-    // ========================================================
-
-    if (
-        wasSolid &&
-        !isSolidNow
-        )
+    // A removed block leaves air that may now receive light.
+    if (wasSolid && !isSolidNow)
     {
-        additionSeeds.insert(
-            std::make_tuple(
-                x,
-                y,
-                z
-            )
-        );
+        additionSeeds.insert(std::make_tuple(x, y, z));
     }
-
-
-    // ========================================================
-    // Process new / surviving light.
-    // ========================================================
 
     for (const auto& addition : additionSeeds)
     {
         propagateSkyLightAddition(
             world,
-            std::get<0>(
-                addition
-            ),
-            std::get<1>(
-                addition
-            ),
-            std::get<2>(
-                addition
-            ),
+            std::get<0>(addition),
+            std::get<1>(addition),
+            std::get<2>(addition),
             dirtyChunks
         );
     }
 
+    // Initialize any new lighting regions around the edit.
+    extendSkyLightArea(world, x, y, z, dirtyChunks);
 
     return dirtyChunks;
+}
+
+
+// ============================================================
+// Initialize lighting when building into new areas
+// ============================================================
+
+void Lighting::extendSkyLightArea(
+    const World& world,
+    int x,
+    int y,
+    int z,
+    std::set<std::tuple<int, int, int>>& dirtyChunks
+)
+{
+    std::vector<std::tuple<int, int, int>> newChunks;
+
+    const int cx = getChunkCoordinate(x);
+    const int cy = getChunkCoordinate(y);
+    const int cz = getChunkCoordinate(z);
+
+    // Allocate the edited chunk and one surrounding chunk.
+    for (int dx = -1; dx <= 1; ++dx)
+    {
+        for (int dy = -1; dy <= 1; ++dy)
+        {
+            for (int dz = -1; dz <= 1; ++dz)
+            {
+                if (findLightChunk(cx + dx, cy + dy, cz + dz))
+                {
+                    continue;
+                }
+
+                getOrCreateLightChunk(cx + dx, cy + dy, cz + dz);
+                newChunks.emplace_back(cx + dx, cy + dy, cz + dz);
+            }
+        }
+    }
+
+    if (newChunks.empty())
+    {
+        return;
+    }
+
+    const int offsets[6][3] =
+    {
+        { 1, 0, 0 },
+        {-1, 0, 0 },
+        { 0, 1, 0 },
+        { 0,-1, 0 },
+        { 0, 0, 1 },
+        { 0, 0,-1 }
+    };
+
+    std::queue<LightPosition> queue;
+
+    // --------------------------------------------------------
+    // Seed ALL new cells with direct sky access first
+    // --------------------------------------------------------
+
+    for (const auto& chunk : newChunks)
+    {
+        const int sx = std::get<0>(chunk) * CHUNK_SIZE;
+        const int sy = std::get<1>(chunk) * CHUNK_SIZE;
+        const int sz = std::get<2>(chunk) * CHUNK_SIZE;
+
+        for (int ax = sx; ax < sx + CHUNK_SIZE; ++ax)
+        {
+            for (int ay = sy; ay < sy + CHUNK_SIZE; ++ay)
+            {
+                for (int az = sz; az < sz + CHUNK_SIZE; ++az)
+                {
+                    if (
+                        findDirectSkyLight(world, ax, ay, az) ==
+                        MAX_LIGHT
+                        )
+                    {
+                        setSkyLight(ax, ay, az, MAX_LIGHT);
+                        addDirtyChunkForCell(
+                            dirtyChunks, ax, ay, az
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------
+    // Find sources beside darker air
+    //
+    // Include old neighbors so light can cross both ways.
+    // --------------------------------------------------------
+
+    for (const auto& chunk : newChunks)
+    {
+        const int sx = std::get<0>(chunk) * CHUNK_SIZE;
+        const int sy = std::get<1>(chunk) * CHUNK_SIZE;
+        const int sz = std::get<2>(chunk) * CHUNK_SIZE;
+
+        for (int ax = sx; ax < sx + CHUNK_SIZE; ++ax)
+        {
+            for (int ay = sy; ay < sy + CHUNK_SIZE; ++ay)
+            {
+                for (int az = sz; az < sz + CHUNK_SIZE; ++az)
+                {
+                    if (world.isSolidAt(ax, ay, az))
+                    {
+                        continue;
+                    }
+
+                    const int light = getSkyLight(ax, ay, az);
+
+                    for (const auto& offset : offsets)
+                    {
+                        const int nx = ax + offset[0];
+                        const int ny = ay + offset[1];
+                        const int nz = az + offset[2];
+
+                        if (
+                            !findLightChunk(
+                                getChunkCoordinate(nx),
+                                getChunkCoordinate(ny),
+                                getChunkCoordinate(nz)
+                            ) ||
+                            world.isSolidAt(nx, ny, nz)
+                            )
+                        {
+                            continue;
+                        }
+
+                        const int neighbor = getSkyLight(nx, ny, nz);
+
+                        if (light > neighbor + 1)
+                        {
+                            queue.push({ ax, ay, az });
+                        }
+
+                        if (neighbor > light + 1)
+                        {
+                            queue.push({ nx, ny, nz });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------
+    // Spread light through the initialized region
+    // --------------------------------------------------------
+
+    while (!queue.empty())
+    {
+        const LightPosition cell = queue.front();
+        queue.pop();
+
+        const int nextLight =
+            getSkyLight(cell.x, cell.y, cell.z) - 1;
+
+        if (nextLight <= 0)
+        {
+            continue;
+        }
+
+        for (const auto& offset : offsets)
+        {
+            const int nx = cell.x + offset[0];
+            const int ny = cell.y + offset[1];
+            const int nz = cell.z + offset[2];
+
+            if (
+                !findLightChunk(
+                    getChunkCoordinate(nx),
+                    getChunkCoordinate(ny),
+                    getChunkCoordinate(nz)
+                ) ||
+                world.isSolidAt(nx, ny, nz) ||
+                getSkyLight(nx, ny, nz) >= nextLight
+                )
+            {
+                continue;
+            }
+
+            setSkyLight(nx, ny, nz, nextLight);
+            addDirtyChunkForCell(dirtyChunks, nx, ny, nz);
+
+            queue.push({ nx, ny, nz });
+        }
+    }
 }

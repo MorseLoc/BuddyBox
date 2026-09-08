@@ -19,10 +19,11 @@ enum class ItemType
     GrassBlock,
     DirtBlock,
     WoodBlock,
-    LeafBlock,
-    StoneBlock,
-
-    Stick
+    Stick,
+    Pebble,
+	Wood2Block,
+	Wood3Block,
+	Wood4Block
 };
 
 

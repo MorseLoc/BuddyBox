@@ -8,97 +8,94 @@
 
 
 // ============================================================
-// Inventory
-//
-// Represents the player's hotbar.
-//
-// The Inventory stores:
-// - Which BlockType is in each slot
-// - Which slot is currently selected
-//
-// Inventory.cpp handles:
-// - Loading the hotbar from a file
-// - Cycling between slots
-// - Returning selected block information
-// ============================================================
-
-// ============================================================
 // Inventory slot
 //
-// One space in the player's inventory.
-//
-// Each slot remembers:
-// - What item is inside
-// - How many of that item the player has
+// Each slot stores an item type and its quantity.
+// New slots start empty.
 // ============================================================
 
 struct InventorySlot
 {
-    ItemType item;
-
-    int amount;
+    ItemType item = ItemType::None;
+    int amount = 0;
 };
+
+
+// ============================================================
+// Inventory
+//
+// Slots 0–5:  hotbar
+// Slots 6–11: storage
+// ============================================================
 
 class Inventory
 {
 public:
+    static constexpr int HOTBAR_SLOTS = 6;
+    static constexpr int SLOT_COUNT = 12;
+    static constexpr int MAX_STACK_SIZE = 99;
+
+
     // --------------------------------------------------------
     // Constructor
     // --------------------------------------------------------
 
-    // Creates the player's starting hotbar.
     Inventory();
+
+
+    // --------------------------------------------------------
+    // Dragging
+    // --------------------------------------------------------
+
+    // Begin dragging a nonempty slot.
+    // Returns false if dragging cannot begin.
+    bool beginDrag(int slot);
+
+    // Release over a slot to move, combine, or swap items.
+    void finishDrag(int destination);
+
+    // Cancel without moving any items.
+    void cancelDrag();
+
+    // Returns the source slot, or -1 when nothing is dragged.
+    int getDraggedSlot() const;
 
 
     // --------------------------------------------------------
     // Loading
     // --------------------------------------------------------
 
-    // Loads hotbar contents from a text file.
-    //
-    // Returns:
-    // true  = file opened successfully
-    // false = file could not be opened
+    // Load inventory entries from a text file.
     bool loadFromFile(
         const std::string& filePath
     );
 
 
     // --------------------------------------------------------
-    // Slot selection
+    // Hotbar selection
     // --------------------------------------------------------
 
-    // Moves the selected slot left or right.
-    //
-    // direction:
-    //  1 = move forward
-    // -1 = move backward
+    //  1 = next slot
+    // -1 = previous slot
     void cycleSlot(
         int direction
     );
 
-    // --------------------------------------------------------
-// Adding items
-// --------------------------------------------------------
 
-// Adds an item to the inventory.
-//
-// First:
-// Look for an existing stack of that item.
-//
-// Otherwise:
-// Put it into the first empty slot.
-//
-// Returns false if the inventory is completely full.
+    // --------------------------------------------------------
+    // Adding and removing items
+    // --------------------------------------------------------
+
+    // Fill matching stacks, then empty slots.
+    // Returns false without adding anything if the full
+    // amount cannot fit.
     bool addItem(
         ItemType itemType,
         int amount = 1
     );
 
-    // Removes one item from the
-// currently selected hotbar slot.
-//
-// Returns false if the slot is empty.
+    // Remove one item from the selected hotbar slot.
+    // Returns false if that slot is empty.
     bool removeSelectedItem();
 
 
@@ -106,57 +103,39 @@ public:
     // Inventory information
     // --------------------------------------------------------
 
-    // Returns the BlockType in the currently selected slot.
-    //
-    // Used when the player places a block.
+    // These block-type getters only describe placeable items.
+    // Check the item's feature before using it to place a block.
     BlockType getSelectedBlockType() const;
 
-
-    // Returns the BlockType stored
-    // in a specific hotbar slot.
-    //
-    // Used by the UI when drawing the hotbar.
     BlockType getBlockTypeAtSlot(
         int slot
     ) const;
 
-    // Returns the ItemType stored
-// in a specific inventory slot.
-//
-// Used by the UI to draw item icons.
+    // Return the item type in a particular slot.
     ItemType getItemTypeAtSlot(
         int slot
     ) const;
 
-    // Returns how many items are
-// stored in a specific slot.
+    // Return the quantity in a particular slot.
     int getAmountAtSlot(
         int slot
     ) const;
 
-    // Returns the ItemType currently
-// selected by the player.
-//
-// Used to decide what the selected
-// item is allowed to do.
+    // Return the selected hotbar item's type.
     ItemType getSelectedItemType() const;
 
-    // Returns the currently selected slot number.
-    //
-    // Slot numbering begins at 0.
+    // Return the selected hotbar slot number.
     int getSelectedSlot() const;
 
 
 private:
-    // --------------------------------------------------------
-    // Hotbar data
-    // --------------------------------------------------------
-
- // Stores the item and quantity
-// inside each inventory slot.
+    // All 12 inventory slots.
     std::vector<InventorySlot> slots;
 
-
-    // Index of the currently selected slot.
+    // Currently selected hotbar slot.
     int selectedSlot;
+
+    // Keep dragged items in their source slot until release.
+    // This makes cancelling safe even when inventory is full.
+    int draggedSlot = -1;
 };

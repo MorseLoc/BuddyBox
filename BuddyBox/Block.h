@@ -28,7 +28,13 @@ enum class BlockType
     Dirt,
     Wood,
     Leaf,
-    Stone
+    Stone,
+    Wood2,
+    Wood3,
+    Wood4,
+    YellowFlower,
+    RedFlower,
+    BlueFlower
 };
 
 

@@ -70,27 +70,38 @@ Item::Item(
         placedBlockType =
             BlockType::Wood;
     }
-    else if (type == ItemType::LeafBlock)
+    else if (type == ItemType::Wood2Block)
     {
         textureRow =
-            3;
+            5;
 
         feature =
             ItemFeature::PlaceBlock;
 
         placedBlockType =
-            BlockType::Leaf;
+            BlockType::Wood2;
     }
-    else if (type == ItemType::StoneBlock)
+    else if (type == ItemType::Wood3Block)
     {
         textureRow =
-            4;
+            6;
 
         feature =
             ItemFeature::PlaceBlock;
 
         placedBlockType =
-            BlockType::Stone;
+            BlockType::Wood3;
+    }
+    else if (type == ItemType::Wood4Block)
+    {
+        textureRow =
+            7;
+
+        feature =
+            ItemFeature::PlaceBlock;
+
+        placedBlockType =
+            BlockType::Wood4;
     }
 
 
@@ -101,9 +112,16 @@ Item::Item(
     else if (type == ItemType::Stick)
     {
         textureRow =
-            5;
+            3;
 
         feature =
             ItemFeature::None;
     }
+    else if (type == ItemType::Pebble)
+    {
+        textureRow =
+            4;
+
+        feature =
+            ItemFeature::None;
 }

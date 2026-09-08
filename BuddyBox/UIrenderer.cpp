@@ -1,13 +1,11 @@
-#include "UIRenderer.h"
+#include "UIrenderer.h"
+#include "inventoryLayout.h"
 
 #include <glad/glad.h>
 
 
 // ============================================================
-// UIRenderer constructor
-//
-// Starts with no OpenGL resources created.
-// initialize() creates them later.
+// Constructor
 // ============================================================
 
 UIRenderer::UIRenderer()
@@ -19,35 +17,15 @@ UIRenderer::UIRenderer()
 
 
 // ============================================================
-// Initialize UI renderer
-//
-// Creates:
-// - A reusable rectangle
-// - The rectangle's VAO and VBO
-// - The UI vertex shader
-// - The UI fragment shader
-// - The final UI shader program
-//
-// Returns true when initialization finishes.
+// Initialize the UI rectangle and shaders
 // ============================================================
 
 bool UIRenderer::initialize()
 {
-    // ========================================================
-    // 1. Rectangle vertex data
-    // ========================================================
-
-    // Two triangles forming one rectangle.
-    //
-    // Each vertex stores:
-    // X, Y = position
-    // U, V = texture coordinates
-    //
-    // This same rectangle is resized and repositioned
-    // to draw all current UI elements.
+    // Two triangles form one reusable rectangle.
+    // Each vertex contains X, Y, U, V.
     float vertices[] =
     {
-        // position      // texture coordinates
         -1.0f, -1.0f,    0.0f, 0.0f,
          1.0f, -1.0f,    1.0f, 0.0f,
          1.0f,  1.0f,    1.0f, 1.0f,
@@ -57,33 +35,11 @@ bool UIRenderer::initialize()
         -1.0f,  1.0f,    0.0f, 1.0f
     };
 
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
 
-    // ========================================================
-    // 2. Create VAO and VBO
-    // ========================================================
-
-    glGenVertexArrays(
-        1,
-        &VAO
-    );
-
-
-    glGenBuffers(
-        1,
-        &VBO
-    );
-
-
-    glBindVertexArray(
-        VAO
-    );
-
-
-    glBindBuffer(
-        GL_ARRAY_BUFFER,
-        VBO
-    );
-
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
     glBufferData(
         GL_ARRAY_BUFFER,
@@ -92,11 +48,7 @@ bool UIRenderer::initialize()
         GL_STATIC_DRAW
     );
 
-
-    // --------------------------------------------------------
-    // Vertex attribute 0: position
-    // --------------------------------------------------------
-
+    // Attribute 0: rectangle position.
     glVertexAttribPointer(
         0,
         2,
@@ -105,17 +57,9 @@ bool UIRenderer::initialize()
         4 * sizeof(float),
         (void*)0
     );
+    glEnableVertexAttribArray(0);
 
-
-    glEnableVertexAttribArray(
-        0
-    );
-
-
-    // --------------------------------------------------------
-    // Vertex attribute 1: texture coordinates
-    // --------------------------------------------------------
-
+    // Attribute 1: texture coordinates.
     glVertexAttribPointer(
         1,
         2,
@@ -124,19 +68,9 @@ bool UIRenderer::initialize()
         4 * sizeof(float),
         (void*)(2 * sizeof(float))
     );
+    glEnableVertexAttribArray(1);
 
-
-    glEnableVertexAttribArray(
-        1
-    );
-
-
-    // ========================================================
-    // 3. Vertex shader
-    // ========================================================
-
-    // The vertex shader resizes and moves the reusable
-    // rectangle to the correct place on the screen.
+    // Resize and position the rectangle on screen.
     const char* vertexShaderSource = R"(
         #version 330 core
 
@@ -153,250 +87,102 @@ bool UIRenderer::initialize()
             vec2 screenPosition =
                 position * uiScale + uiPosition;
 
-            gl_Position =
-                vec4(screenPosition, 0.0, 1.0);
-
+            gl_Position = vec4(screenPosition, 0.0, 1.0);
             uv = textureCoordinate;
         }
     )";
 
-
-    // ========================================================
-    // 4. Fragment shader
-    // ========================================================
-
-    // The fragment shader has three drawing modes:
-    //
-    // 0 = hotbar frame
-    // 1 = block icon
-    // 2 = solid white shape
+    // Drawing modes:
+    // 0 = selected hotbar frame
+    // 1 = Itemdex icon
+    // 2 = solid white rectangle
+    // 3 = Numberdex digit
+    // 4 = full inventory background
     const char* fragmentShaderSource = R"(
         #version 330 core
 
         in vec2 uv;
-
         out vec4 finalColor;
 
         uniform sampler2D uiTexture;
-
         uniform int drawMode;
 
-        // Hotbar frame information.
         uniform float frameStart;
         uniform float frameHeight;
 
-        // Block atlas information.
         uniform float textureRow;
         uniform float atlasRows;
 
-// Numberdex information.
-//
-// Numberdex contains digits 0 - 9
-// arranged horizontally.
-uniform float numberDigit;
+        uniform float numberDigit;
 
         void main()
         {
-            // -----------------------------------------------
-            // Mode 0: hotbar frame
-            // -----------------------------------------------
-
             if (drawMode == 0)
             {
                 vec2 frameUV = uv;
+                frameUV.y = frameStart + uv.y * frameHeight;
 
-                frameUV.y =
-                    frameStart +
-                    uv.y * frameHeight;
-
-                finalColor =
-                    texture(
-                        uiTexture,
-                        frameUV
-                    );
+                finalColor = texture(uiTexture, frameUV);
             }
-
-            // -----------------------------------------------
-            // Mode 1: block icon
-            // -----------------------------------------------
-
             else if (drawMode == 1)
             {
-                // BuddyBox block textures contain
-                // six cube faces horizontally.
-                //
-                // Face 1 is the front face.
-               float atlasU =
-                uv.x;
-
+                float atlasU = uv.x;
                 float atlasV =
-                    (
-                        textureRow +
-                        (1.0 - uv.y)
-                    )
-                    / atlasRows;
+                    (textureRow + (1.0 - uv.y)) / atlasRows;
 
-                finalColor =
-                    texture(
-                        uiTexture,
-                        vec2(
-                            atlasU,
-                            atlasV
-                        )
-                    );
+                finalColor = texture(
+                    uiTexture,
+                    vec2(atlasU, atlasV)
+                );
             }
-
-            // -----------------------------------------------
-            // Mode 2: solid white shape
-            // -----------------------------------------------
-
             else if (drawMode == 2)
             {
-                finalColor =
-                    vec4(
-                        1.0,
-                        1.0,
-                        1.0,
-                        1.0
-                    );
+                finalColor = vec4(1.0, 1.0, 1.0, 1.0);
             }
+            else if (drawMode == 3)
+            {
+                float digitWidth = 1.0 / 10.0;
+                float digitStart = numberDigit * digitWidth;
+                float numberU = digitStart + uv.x * digitWidth;
 
-// -----------------------------------------------
-// Mode 3: inventory number
-// -----------------------------------------------
+                finalColor = texture(
+                    uiTexture,
+                    vec2(numberU, 1.0 - uv.y)
+                );
+            }
+            else if (drawMode == 4)
+            {
+                finalColor = texture(uiTexture, uv);
+            }
+        }
+    )";
 
-else if (drawMode == 3)
-{
-    float digitWidth =
-        1.0 / 10.0;
+    // Compile the vertex shader.
+    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
+    glCompileShader(vertexShader);
 
-    float digitStart =
-        numberDigit *
-        digitWidth;
+    // Compile the fragment shader.
+    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
+    glCompileShader(fragmentShader);
 
-    float numberU =
-        digitStart +
-        uv.x * digitWidth;
+    // Link both shaders into one program.
+    shaderProgram = glCreateProgram();
 
-    finalColor =
-        texture(
-            uiTexture,
-            vec2(
-                numberU,
-                1.0 - uv.y
-            )
-        );
-}
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
 
-
-// -----------------------------------------------
-// Mode 4: full UI texture
-// -----------------------------------------------
-
-else if (drawMode == 4)
-{
-    finalColor =
-        texture(
-            uiTexture,
-            uv
-        );
-}
-
-} // <-- THIS closes main()
-
-)"; // <-- THIS closes the shader string
-
- 
-
-    // ========================================================
-    // 5. Compile shaders
-    // ========================================================
-
-    unsigned int vertexShader =
-        glCreateShader(
-            GL_VERTEX_SHADER
-        );
-
-
-    glShaderSource(
-        vertexShader,
-        1,
-        &vertexShaderSource,
-        nullptr
-    );
-
-
-    glCompileShader(
-        vertexShader
-    );
-
-
-    unsigned int fragmentShader =
-        glCreateShader(
-            GL_FRAGMENT_SHADER
-        );
-
-
-    glShaderSource(
-        fragmentShader,
-        1,
-        &fragmentShaderSource,
-        nullptr
-    );
-
-
-    glCompileShader(
-        fragmentShader
-    );
-
-
-    // ========================================================
-    // 6. Create shader program
-    // ========================================================
-
-    shaderProgram =
-        glCreateProgram();
-
-
-    glAttachShader(
-        shaderProgram,
-        vertexShader
-    );
-
-
-    glAttachShader(
-        shaderProgram,
-        fragmentShader
-    );
-
-
-    glLinkProgram(
-        shaderProgram
-    );
-
-
-    // The individual shader objects are no longer
-    // needed after the program has been linked.
-    glDeleteShader(
-        vertexShader
-    );
-
-
-    glDeleteShader(
-        fragmentShader
-    );
-
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
 
     return true;
 }
 
 
 // ============================================================
-// Draw hotbar
-//
-// Draws:
-// 1. The selected hotbar frame
-// 2. One block icon inside each slot
+// Draw the hotbar
 // ============================================================
 
 void UIRenderer::drawHotbar(
@@ -408,320 +194,127 @@ void UIRenderer::drawHotbar(
     int itemAtlasRows
 )
 {
-    glUseProgram(
-        shaderProgram
-    );
+    glUseProgram(shaderProgram);
 
-
-    // UI should always appear in front of the 3D world.
-    glDisable(
-        GL_DEPTH_TEST
-    );
-
-
-    glBindVertexArray(
-        VAO
-    );
-
-
-    // --------------------------------------------------------
-    // Find shader variables
-    // --------------------------------------------------------
+    // Draw UI in front of the world.
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(VAO);
 
     int drawModeLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "drawMode"
-        );
-
+        glGetUniformLocation(shaderProgram, "drawMode");
 
     int textureLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiTexture"
-        );
-
+        glGetUniformLocation(shaderProgram, "uiTexture");
 
     int scaleLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiScale"
-        );
-
+        glGetUniformLocation(shaderProgram, "uiScale");
 
     int positionLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiPosition"
-        );
-
+        glGetUniformLocation(shaderProgram, "uiPosition");
 
     int frameStartLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "frameStart"
-        );
-
+        glGetUniformLocation(shaderProgram, "frameStart");
 
     int frameHeightLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "frameHeight"
-        );
-
+        glGetUniformLocation(shaderProgram, "frameHeight");
 
     int atlasRowsLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "atlasRows"
-        );
-
+        glGetUniformLocation(shaderProgram, "atlasRows");
 
     int textureRowLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "textureRow"
-        );
+        glGetUniformLocation(shaderProgram, "textureRow");
 
-    // Numberdex digit selector.
     int numberDigitLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "numberDigit"
-        );
+        glGetUniformLocation(shaderProgram, "numberDigit");
 
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(textureLocation, 0);
 
-    // Use texture slot 0 for UI textures.
-    glActiveTexture(
-        GL_TEXTURE0
-    );
+    // --------------------------------------------------------
+    // Selected hotbar frame
+    // --------------------------------------------------------
 
+    glUniform1i(drawModeLocation, 0);
+    glBindTexture(GL_TEXTURE_2D, hotbarTexture);
 
-    glUniform1i(
-        textureLocation,
-        0
-    );
-
-
-    // ========================================================
-    // Draw selected hotbar frame
-    // ========================================================
-
-    glUniform1i(
-        drawModeLocation,
-        0
-    );
-
-
-    glBindTexture(
-        GL_TEXTURE_2D,
-        hotbarTexture
-    );
-
-
-    // Size of the hotbar frame.
-    glUniform2f(
-        scaleLocation,
-        0.45f,
-        0.075f
-    );
-
-
-    // Position near the bottom-center of the screen.
-    glUniform2f(
-        positionLocation,
-        0.0f,
-        -0.85f
-    );
-
+    glUniform2f(scaleLocation, 0.45f, 0.075f);
+    glUniform2f(positionLocation, 0.0f, -0.85f);
 
     // ScrollWheel.png contains six frames stacked vertically.
-    float frameHeight =
-        1.0f / 6.0f;
-
-
-    // Choose the frame matching the selected slot.
+    float frameHeight = 1.0f / 6.0f;
     float frameStart =
-        static_cast<float>(selectedSlot)
-        * frameHeight;
+        static_cast<float>(selectedSlot) * frameHeight;
 
+    glUniform1f(frameStartLocation, frameStart);
+    glUniform1f(frameHeightLocation, frameHeight);
 
-    glUniform1f(
-        frameStartLocation,
-        frameStart
-    );
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
+    // --------------------------------------------------------
+    // Item icons
+    // --------------------------------------------------------
 
-    glUniform1f(
-        frameHeightLocation,
-        frameHeight
-    );
-
-
-    glDrawArrays(
-        GL_TRIANGLES,
-        0,
-        6
-    );
-
-
-    // ========================================================
-    // Draw block icons
-    // ========================================================
-
-    // Switch the shader into block-icon mode.
-    glUniform1i(
-        drawModeLocation,
-        1
-    );
-
-
-    // Item icons come from Itemdex.png.
-    glBindTexture(
-        GL_TEXTURE_2D,
-        itemAtlasTexture
-    );
-
+    glUniform1i(drawModeLocation, 1);
+    glBindTexture(GL_TEXTURE_2D, itemAtlasTexture);
 
     glUniform1f(
         atlasRowsLocation,
         static_cast<float>(itemAtlasRows)
     );
 
+    glUniform2f(scaleLocation, 0.055f, 0.065f);
 
-    // Size of each block icon.
-    glUniform2f(
-        scaleLocation,
-        0.055f,
-        0.065f
-    );
-
-
-    // Draw one icon for each current hotbar slot.
     for (int slot = 0; slot < 6; slot++)
     {
-        // Find which item belongs in this slot.
-        ItemType itemType =
-            inventory.getItemTypeAtSlot(
-                slot
-            );
+        ItemType itemType = inventory.getItemTypeAtSlot(slot);
 
-        // Empty slots have no icon to draw.
-        if (
-            itemType ==
-            ItemType::None
-            )
+        if (itemType == ItemType::None)
         {
             continue;
         }
 
-
-        // Create a temporary item so we can use
-        // its Itemdex texture-row information.
-        Item item(
-            itemType
-        );
-
+        Item item(itemType);
 
         glUniform1f(
             textureRowLocation,
-            static_cast<float>(
-                item.textureRow
-                )
+            static_cast<float>(item.textureRow)
         );
 
-
-        // Calculate this icon's horizontal position.
         float slotX =
-            -0.375f +
-            (
-                static_cast<float>(slot)
-                * 0.15f
-                );
+            -0.375f + static_cast<float>(slot) * 0.15f;
 
-
-        glUniform2f(
-            positionLocation,
-            slotX,
-            -0.85f
-        );
-
-
-        glDrawArrays(
-            GL_TRIANGLES,
-            0,
-            6
-        );
+        glUniform2f(positionLocation, slotX, -0.85f);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-    // ========================================================
-// Draw item amounts
-// ========================================================
+    // --------------------------------------------------------
+    // Stack quantities
+    // --------------------------------------------------------
 
-// Switch to number drawing mode.
-    glUniform1i(
-        drawModeLocation,
-        3
-    );
+    glUniform1i(drawModeLocation, 3);
+    glBindTexture(GL_TEXTURE_2D, numberAtlasTexture);
 
-
-    // Numbers come from Numberdex.png.
-    glBindTexture(
-        GL_TEXTURE_2D,
-        numberAtlasTexture
-    );
-
-
-    // Draw the amount for each hotbar slot.
     for (int slot = 0; slot < 6; slot++)
     {
-        int amount =
-            inventory.getAmountAtSlot(
-                slot
-            );
+        int amount = inventory.getAmountAtSlot(slot);
 
-
-        // Don't draw a number for empty slots
-        // or single items.
-        if (
-            amount <= 1
-            )
+        // Hide quantities for empty slots and single items.
+        if (amount <= 1)
         {
             continue;
         }
 
-
         float slotX =
-            -0.375f +
-            (
-                static_cast<float>(slot)
-                * 0.15f
-                );
+            -0.375f + static_cast<float>(slot) * 0.15f;
 
+        glUniform2f(scaleLocation, 0.018f, 0.030f);
 
-        // Small 3 x 5 number.
-        glUniform2f(
-            scaleLocation,
-            0.018f,
-            0.030f
-        );
-
-
-        // --------------------------------------------------------
-        // Amounts 2 - 9
-        // --------------------------------------------------------
-
-        if (
-            amount < 10
-            )
+        if (amount < 10)
         {
             glUniform1f(
                 numberDigitLocation,
-                static_cast<float>(
-                    amount
-                    )
+                static_cast<float>(amount)
             );
-
 
             glUniform2f(
                 positionLocation,
@@ -729,35 +322,17 @@ void UIRenderer::drawHotbar(
                 -0.885f
             );
 
-
-            glDrawArrays(
-                GL_TRIANGLES,
-                0,
-                6
-            );
+            glDrawArrays(GL_TRIANGLES, 0, 6);
         }
-
-        // --------------------------------------------------------
-        // Amounts 10 - 99
-        // --------------------------------------------------------
-
         else
         {
-            int tensDigit =
-                amount / 10;
+            int tensDigit = amount / 10;
+            int onesDigit = amount % 10;
 
-            int onesDigit =
-                amount % 10;
-
-
-            // Draw tens digit.
             glUniform1f(
                 numberDigitLocation,
-                static_cast<float>(
-                    tensDigit
-                    )
+                static_cast<float>(tensDigit)
             );
-
 
             glUniform2f(
                 positionLocation,
@@ -765,22 +340,12 @@ void UIRenderer::drawHotbar(
                 -0.885f
             );
 
+            glDrawArrays(GL_TRIANGLES, 0, 6);
 
-            glDrawArrays(
-                GL_TRIANGLES,
-                0,
-                6
-            );
-
-
-            // Draw ones digit.
             glUniform1f(
                 numberDigitLocation,
-                static_cast<float>(
-                    onesDigit
-                    )
+                static_cast<float>(onesDigit)
             );
-
 
             glUniform2f(
                 positionLocation,
@@ -788,33 +353,19 @@ void UIRenderer::drawHotbar(
                 -0.885f
             );
 
-
-            glDrawArrays(
-                GL_TRIANGLES,
-                0,
-                6
-            );
+            glDrawArrays(GL_TRIANGLES, 0, 6);
         }
     }
 
-
-    // Restore normal 3D depth testing.
-    glEnable(
-        GL_DEPTH_TEST
-    );
+    glEnable(GL_DEPTH_TEST);
 }
 
+
 // ============================================================
-// Draw inventory
+// Draw the full inventory
 //
-// Draws:
-// - Full 12-slot inventory background
-// - All 12 item icons
-// - Stack amounts
-//
-// Slots:
-// 0 - 5  = bottom row / hotbar
-// 6 - 11 = top row / inventory storage
+// Bottom row: slots 0–5
+// Top row: slots 6–11
 // ============================================================
 
 void UIRenderer::drawInventory(
@@ -822,493 +373,201 @@ void UIRenderer::drawInventory(
     unsigned int itemAtlasTexture,
     unsigned int numberAtlasTexture,
     const Inventory& inventory,
-    int itemAtlasRows
+    int itemAtlasRows,
+    float mouseX,
+    float mouseY,
+    int hoveredSlot
 )
 {
-    glUseProgram(
-        shaderProgram
-    );
+    glUseProgram(shaderProgram);
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(VAO);
 
-
-    glDisable(
-        GL_DEPTH_TEST
-    );
-
-
-    glBindVertexArray(
-        VAO
-    );
-
-
-    // --------------------------------------------------------
-    // Shader locations
-    // --------------------------------------------------------
-
-    int drawModeLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "drawMode"
-        );
-
-
-    int textureLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiTexture"
-        );
-
-
-    int scaleLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiScale"
-        );
-
-
-    int positionLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiPosition"
-        );
-
-
-    int atlasRowsLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "atlasRows"
-        );
-
-
-    int textureRowLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "textureRow"
-        );
-
-
-    int numberDigitLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "numberDigit"
-        );
-
-
-    glActiveTexture(
-        GL_TEXTURE0
-    );
-
-
+    glActiveTexture(GL_TEXTURE0);
     glUniform1i(
-        textureLocation,
+        glGetUniformLocation(shaderProgram, "uiTexture"),
         0
     );
 
+    const int mode =
+        glGetUniformLocation(shaderProgram, "drawMode");
 
-    // ========================================================
-    // Draw inventory background
-    // ========================================================
+    const int scale =
+        glGetUniformLocation(shaderProgram, "uiScale");
 
-    glBindTexture(
-        GL_TEXTURE_2D,
-        inventoryTexture
-    );
+    const int position =
+        glGetUniformLocation(shaderProgram, "uiPosition");
 
+    const int row =
+        glGetUniformLocation(shaderProgram, "textureRow");
 
-    glUniform1i(
-        drawModeLocation,
-        4
-    );
-
-
-    glUniform2f(
-        scaleLocation,
-        0.45f,
-        0.15f
-    );
-
-
-    glUniform2f(
-        positionLocation,
-        0.0f,
-        -0.775f
-    );
-
-
-    glDrawArrays(
-        GL_TRIANGLES,
-        0,
-        6
-    );
-
-
-    // ========================================================
-    // Draw item icons
-    // ========================================================
-
-    glUniform1i(
-        drawModeLocation,
-        1
-    );
-
-
-    glBindTexture(
-        GL_TEXTURE_2D,
-        itemAtlasTexture
-    );
-
+    const int digit =
+        glGetUniformLocation(shaderProgram, "numberDigit");
 
     glUniform1f(
-        atlasRowsLocation,
-        static_cast<float>(
-            itemAtlasRows
-            )
+        glGetUniformLocation(shaderProgram, "atlasRows"),
+        static_cast<float>(itemAtlasRows)
     );
 
+    // --------------------------------------------------------
+    // Inventory background
+    // --------------------------------------------------------
+
+    glBindTexture(GL_TEXTURE_2D, inventoryTexture);
+    glUniform1i(mode, 4);
 
     glUniform2f(
-        scaleLocation,
-        0.055f,
-        0.065f
+        scale,
+        InventoryLayout::HALF_WIDTH,
+        InventoryLayout::HALF_HEIGHT
     );
 
+    glUniform2f(position, 0.0f, InventoryLayout::CENTER_Y);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    for (int slot = 0; slot < 12; slot++)
+    // --------------------------------------------------------
+    // Outline the slot under the mouse
+    // --------------------------------------------------------
+
+    if (hoveredSlot >= 0 && hoveredSlot < Inventory::SLOT_COUNT)
     {
-        ItemType itemType =
-            inventory.getItemTypeAtSlot(
-                slot
+        glUniform1i(mode, 2);
+
+        const float x = InventoryLayout::slotX(hoveredSlot);
+        const float y = InventoryLayout::slotY(hoveredSlot);
+
+        const float half =
+            InventoryLayout::CELL_SIZE * 0.5f - 0.003f;
+
+        for (int side : {-1, 1})
+        {
+            // Top and bottom edges.
+            glUniform2f(scale, half, 0.002f);
+            glUniform2f(position, x, y + side * half);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+            // Left and right edges.
+            glUniform2f(scale, 0.002f, half);
+            glUniform2f(position, x + side * half, y);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+    }
+
+    // --------------------------------------------------------
+    // Helper: draw one stack at any screen position
+    // --------------------------------------------------------
+
+    auto drawStack = [&](int slot, float x, float y)
+        {
+            const ItemType type = inventory.getItemTypeAtSlot(slot);
+            const int amount = inventory.getAmountAtSlot(slot);
+
+            if (type == ItemType::None || amount <= 0)
+            {
+                return;
+            }
+
+            const Item item(type);
+
+            // Draw the item icon.
+            glUniform1i(mode, 1);
+            glBindTexture(GL_TEXTURE_2D, itemAtlasTexture);
+
+            glUniform1f(row, static_cast<float>(item.textureRow));
+            glUniform2f(scale, 0.055f, 0.065f);
+            glUniform2f(position, x, y);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+            if (amount <= 1)
+            {
+                return;
+            }
+
+            // Draw the quantity over the icon.
+            glUniform1i(mode, 3);
+            glBindTexture(GL_TEXTURE_2D, numberAtlasTexture);
+            glUniform2f(scale, 0.018f, 0.030f);
+
+            if (amount >= 10)
+            {
+                glUniform1f(digit, static_cast<float>(amount / 10));
+                glUniform2f(position, x + 0.018f, y - 0.035f);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
+
+            glUniform1f(digit, static_cast<float>(amount % 10));
+
+            glUniform2f(
+                position,
+                x + (amount >= 10 ? 0.048f : 0.040f),
+                y - 0.035f
             );
 
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        };
 
-        if (
-            itemType ==
-            ItemType::None
-            )
+    // --------------------------------------------------------
+    // Draw stationary stacks
+    // --------------------------------------------------------
+
+    const int dragged = inventory.getDraggedSlot();
+
+    for (int slot = 0; slot < Inventory::SLOT_COUNT; ++slot)
+    {
+        // The dragged stack is drawn at the mouse instead.
+        if (slot == dragged)
         {
             continue;
         }
 
-
-        Item item(
-            itemType
-        );
-
-
-        glUniform1f(
-            textureRowLocation,
-            static_cast<float>(
-                item.textureRow
-                )
-        );
-
-
-        // Convert slot 0 - 11 into column 0 - 5.
-        int column =
-            slot % 6;
-
-
-        float slotX =
-            -0.375f +
-            (
-                static_cast<float>(column)
-                * 0.15f
-                );
-
-
-        // Bottom row = slots 0 - 5.
-        // Top row    = slots 6 - 11.
-        float slotY;
-
-
-        if (slot < 6)
-        {
-            slotY =
-                -0.85f;
-        }
-        else
-        {
-            slotY =
-                -0.70f;
-        }
-
-
-        glUniform2f(
-            positionLocation,
-            slotX,
-            slotY
-        );
-
-
-        glDrawArrays(
-            GL_TRIANGLES,
-            0,
-            6
+        drawStack(
+            slot,
+            InventoryLayout::slotX(slot),
+            InventoryLayout::slotY(slot)
         );
     }
 
-
-    // ========================================================
-    // Draw stack amounts
-    // ========================================================
-
-    glUniform1i(
-        drawModeLocation,
-        3
-    );
-
-
-    glBindTexture(
-        GL_TEXTURE_2D,
-        numberAtlasTexture
-    );
-
-
-    glUniform2f(
-        scaleLocation,
-        0.018f,
-        0.030f
-    );
-
-
-    for (int slot = 0; slot < 12; slot++)
+    // Draw the dragged stack last so it appears on top.
+    if (dragged >= 0)
     {
-        int amount =
-            inventory.getAmountAtSlot(
-                slot
-            );
-
-
-        if (amount <= 1)
-        {
-            continue;
-        }
-
-
-        int column =
-            slot % 6;
-
-
-        float slotX =
-            -0.375f +
-            (
-                static_cast<float>(column)
-                * 0.15f
-                );
-
-
-        float slotY;
-
-
-        if (slot < 6)
-        {
-            slotY =
-                -0.885f;
-        }
-        else
-        {
-            slotY =
-                -0.735f;
-        }
-
-
-        // ----------------------------------------------------
-        // Single digit
-        // ----------------------------------------------------
-
-        if (amount < 10)
-        {
-            glUniform1f(
-                numberDigitLocation,
-                static_cast<float>(
-                    amount
-                    )
-            );
-
-
-            glUniform2f(
-                positionLocation,
-                slotX + 0.040f,
-                slotY
-            );
-
-
-            glDrawArrays(
-                GL_TRIANGLES,
-                0,
-                6
-            );
-        }
-
-        // ----------------------------------------------------
-        // Two digits
-        // ----------------------------------------------------
-
-        else
-        {
-            int tensDigit =
-                amount / 10;
-
-
-            int onesDigit =
-                amount % 10;
-
-
-            glUniform1f(
-                numberDigitLocation,
-                static_cast<float>(
-                    tensDigit
-                    )
-            );
-
-
-            glUniform2f(
-                positionLocation,
-                slotX + 0.018f,
-                slotY
-            );
-
-
-            glDrawArrays(
-                GL_TRIANGLES,
-                0,
-                6
-            );
-
-
-            glUniform1f(
-                numberDigitLocation,
-                static_cast<float>(
-                    onesDigit
-                    )
-            );
-
-
-            glUniform2f(
-                positionLocation,
-                slotX + 0.048f,
-                slotY
-            );
-
-
-            glDrawArrays(
-                GL_TRIANGLES,
-                0,
-                6
-            );
-        }
+        drawStack(dragged, mouseX, mouseY);
     }
 
-
-    glEnable(
-        GL_DEPTH_TEST
-    );
+    glEnable(GL_DEPTH_TEST);
 }
 
+
 // ============================================================
-// Draw crosshair
-//
-// Draws two small white rectangles in the center
-// of the screen.
+// Draw the crosshair
 // ============================================================
 
 void UIRenderer::drawCrosshair()
 {
-    glUseProgram(
-        shaderProgram
-    );
-
-
-    // Crosshair should appear over the 3D world.
-    glDisable(
-        GL_DEPTH_TEST
-    );
-
-
-    glBindVertexArray(
-        VAO
-    );
-
+    glUseProgram(shaderProgram);
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(VAO);
 
     int scaleLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiScale"
-        );
-
+        glGetUniformLocation(shaderProgram, "uiScale");
 
     int positionLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "uiPosition"
-        );
-
+        glGetUniformLocation(shaderProgram, "uiPosition");
 
     int drawModeLocation =
-        glGetUniformLocation(
-            shaderProgram,
-            "drawMode"
-        );
+        glGetUniformLocation(shaderProgram, "drawMode");
 
+    // Mode 2 draws solid white rectangles.
+    glUniform1i(drawModeLocation, 2);
 
-    // Mode 2 draws a solid white rectangle.
-    glUniform1i(
-        drawModeLocation,
-        2
-    );
+    // Vertical bar.
+    glUniform2f(scaleLocation, 0.008f, 0.035f);
+    glUniform2f(positionLocation, 0.0f, 0.0f);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
+    // Horizontal bar.
+    glUniform2f(scaleLocation, 0.025f, 0.010f);
+    glUniform2f(positionLocation, 0.0f, 0.0f);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
-    // --------------------------------------------------------
-    // Vertical crosshair bar
-    // --------------------------------------------------------
-
-    glUniform2f(
-        scaleLocation,
-        0.008f,
-        0.035f
-    );
-
-
-    glUniform2f(
-        positionLocation,
-        0.0f,
-        0.0f
-    );
-
-
-    glDrawArrays(
-        GL_TRIANGLES,
-        0,
-        6
-    );
-
-
-    // --------------------------------------------------------
-    // Horizontal crosshair bar
-    // --------------------------------------------------------
-
-    glUniform2f(
-        scaleLocation,
-        0.025f,
-        0.010f
-    );
-
-
-    glUniform2f(
-        positionLocation,
-        0.0f,
-        0.0f
-    );
-
-
-    glDrawArrays(
-        GL_TRIANGLES,
-        0,
-        6
-    );
-
-
-    // Restore normal world rendering.
-    glEnable(
-        GL_DEPTH_TEST
-    );
+    glEnable(GL_DEPTH_TEST);
 }
