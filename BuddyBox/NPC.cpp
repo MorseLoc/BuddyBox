@@ -15,69 +15,101 @@
 // ============================================================
 
 NPC::NPC(
-    NPCType npcType,
-    const glm::vec3& startPosition
+	NPCType npcType,
+	const glm::vec3& startPosition
 )
 {
-    type = npcType;
+	type = npcType;
 
-    position = startPosition;
+	position = startPosition;
 
-    targetPosition = startPosition;
+	targetPosition = startPosition;
 
-    hasTarget = false;
+	hasTarget = false;
 
+	configureForType();
 
-    // Jebub movement speed.
-    speed = 1.5f;
-
-
-    // Starting facing direction.
-    facingYaw = 0.0f;
+	// Jebub movement speed.
+	// REMOVED speed = 1.5f;
 
 
-    // Jebub collision box.
-    //
-    // Slightly smaller than a full block.
-    size = glm::vec3(
-        0.8f,
-        1.3f,
-        0.8f
-    );
+	// Starting facing direction.
+	facingYaw = 0.0f;
 
 
-    // Start with no vertical movement.
-    verticalVelocity = 0.0f;
-
-    knockbackVelocity = glm::vec3(0.0f);
-
-
-    // Collision will determine whether
-    // the NPC is standing on the ground.
-    grounded = false;
-
-
-    // Start stuck detection from
-    // the NPC's starting position.
-    lastPosition =
-        position;
+	// Jebub collision box.
+	//
+	// Slightly smaller than a full block.
+    // REMOVED size = glm::vec3(
+	 //   0.8f,
+	 //   1.3f,
+	 //   0.8f
+    // );
 
 
-    // NPC starts with no stuck time.
-    stuckTimer =
-        0.0f;
+	// Start with no vertical movement.
+	verticalVelocity = 0.0f;
+
+	knockbackVelocity = glm::vec3(0.0f);
 
 
-    // Walking animation starts at the beginning.
-    walkAnimationTime =
-        0.0f;
+	// Collision will determine whether
+	// the NPC is standing on the ground.
+	grounded = false;
 
 
-    // NPC starts without walking.
-    moving =
-        false;
+	// Start stuck detection from
+	// the NPC's starting position.
+	lastPosition =
+		position;
+
+
+	// NPC starts with no stuck time.
+	stuckTimer =
+		0.0f;
+
+
+	// Walking animation starts at the beginning.
+	walkAnimationTime =
+		0.0f;
+
+
+	// NPC starts without walking.
+	moving =
+		false;
 }
 
+void NPC::configureForType()
+{
+	// Safe defaults for future NPC types.
+	speed = 1.0f;
+	size = glm::vec3(1.0f);
+	maxHealth = 1;
+	dropItem = ItemType::None;
+
+	switch (type)
+	{
+	case NPCType::Jebub:
+	{
+		speed = 1.5f;
+
+		size = glm::vec3(
+			0.8f,
+			1.3f,
+			0.8f
+		);
+
+		maxHealth = 3;
+
+		// Pebble already has an inventory texture.
+		dropItem = ItemType::Pebble;
+
+		break;
+	}
+	}
+
+	health = maxHealth;
+}
 
 // ============================================================
 // Update NPC
@@ -94,213 +126,213 @@ NPC::NPC(
 // ============================================================
 
 void NPC::update(
-    float deltaTime,
-    const World& world
+	float deltaTime,
+	const World& world
 )
 {
-    // --------------------------------------------------------
-    // Choose a destination
-    // --------------------------------------------------------
+	// --------------------------------------------------------
+	// Choose a destination
+	// --------------------------------------------------------
 
-    if (
-        !hasTarget &&
-        glm::length(knockbackVelocity) < 0.05f
-        )
-    {
-        chooseRandomTarget(world);
-    }
-
-
-    // Assume the NPC is not moving.
-    //
-    // moveTowardTarget() will change this to true
-    // if the NPC is currently trying to walk.
-    moving =
-        false;
+	if (
+		!hasTarget &&
+		glm::length(knockbackVelocity) < 0.05f
+		)
+	{
+		chooseRandomTarget(world);
+	}
 
 
-    // --------------------------------------------------------
-    // Walk toward destination
-    // --------------------------------------------------------
+	// Assume the NPC is not moving.
+	//
+	// moveTowardTarget() will change this to true
+	// if the NPC is currently trying to walk.
+	moving =
+		false;
 
-    if (hasTarget)
-    {
-        moveTowardTarget(
-            deltaTime,
-            world
-        );
-    }
 
-    // --------------------------------------------------------
+	// --------------------------------------------------------
+	// Walk toward destination
+	// --------------------------------------------------------
+
+	if (hasTarget)
+	{
+		moveTowardTarget(
+			deltaTime,
+			world
+		);
+	}
+
+	// --------------------------------------------------------
 // Punch knockback
 // --------------------------------------------------------
 
-    if (glm::length(knockbackVelocity) >= 0.05f)
-    {
-        glm::vec3 knockbackMove =
-            knockbackVelocity * deltaTime;
+	if (glm::length(knockbackVelocity) >= 0.05f)
+	{
+		glm::vec3 knockbackMove =
+			knockbackVelocity * deltaTime;
 
-        glm::vec3 testPosition = position;
+		glm::vec3 testPosition = position;
 
-        testPosition.x += knockbackMove.x;
+		testPosition.x += knockbackMove.x;
 
-        if (!collidesWithWorld(testPosition, world))
-        {
-            position.x = testPosition.x;
-        }
-        else
-        {
-            knockbackVelocity.x = 0.0f;
-        }
+		if (!collidesWithWorld(testPosition, world))
+		{
+			position.x = testPosition.x;
+		}
+		else
+		{
+			knockbackVelocity.x = 0.0f;
+		}
 
-        testPosition = position;
-        testPosition.z += knockbackMove.z;
+		testPosition = position;
+		testPosition.z += knockbackMove.z;
 
-        if (!collidesWithWorld(testPosition, world))
-        {
-            position.z = testPosition.z;
-        }
-        else
-        {
-            knockbackVelocity.z = 0.0f;
-        }
+		if (!collidesWithWorld(testPosition, world))
+		{
+			position.z = testPosition.z;
+		}
+		else
+		{
+			knockbackVelocity.z = 0.0f;
+		}
 
-        // Slow the push down smoothly.
-        knockbackVelocity *= std::exp(-7.0f * deltaTime);
+		// Slow the push down smoothly.
+		knockbackVelocity *= std::exp(-7.0f * deltaTime);
 
-        moving = true;
-    }
-
-
-    // --------------------------------------------------------
-    // Walking animation
-    // --------------------------------------------------------
-
-    if (moving)
-    {
-        // Advance the walking animation
-        // while the NPC is moving.
-        walkAnimationTime +=
-            deltaTime;
-    }
-    else
-    {
-        // Reset the animation when standing still
-        // so the legs return to resting position.
-        walkAnimationTime =
-            0.0f;
-    }
+		moving = true;
+	}
 
 
-    // --------------------------------------------------------
-    // Stuck detection
-    // --------------------------------------------------------
+	// --------------------------------------------------------
+	// Walking animation
+	// --------------------------------------------------------
 
-    glm::vec3 movementSinceLastFrame =
-        position - lastPosition;
-
-
-    // Ignore vertical movement.
-    movementSinceLastFrame.y =
-        0.0f;
-
-
-    float movedDistance =
-        glm::length(
-            movementSinceLastFrame
-        );
-
-
-    // If the NPC has a target but is barely moving,
-    // count how long it has been stuck.
-    if (
-        hasTarget &&
-        movedDistance < 0.005f
-        )
-    {
-        stuckTimer +=
-            deltaTime;
-    }
-    else
-    {
-        stuckTimer =
-            0.0f;
-    }
+	if (moving)
+	{
+		// Advance the walking animation
+		// while the NPC is moving.
+		walkAnimationTime +=
+			deltaTime;
+	}
+	else
+	{
+		// Reset the animation when standing still
+		// so the legs return to resting position.
+		walkAnimationTime =
+			0.0f;
+	}
 
 
-    // Save current position for the next frame.
-    lastPosition =
-        position;
+	// --------------------------------------------------------
+	// Stuck detection
+	// --------------------------------------------------------
+
+	glm::vec3 movementSinceLastFrame =
+		position - lastPosition;
 
 
-    // Give up on this target after one second
-    // without meaningful movement.
-    if (stuckTimer >= 1.0f)
-    {
-        hasTarget =
-            false;
+	// Ignore vertical movement.
+	movementSinceLastFrame.y =
+		0.0f;
 
 
-        stuckTimer =
-            0.0f;
-    }
+	float movedDistance =
+		glm::length(
+			movementSinceLastFrame
+		);
 
 
-    // --------------------------------------------------------
-    // Gravity
-    // --------------------------------------------------------
-
-    const float gravity =
-        -23.0f;
-
-
-    verticalVelocity +=
-        gravity * deltaTime;
-
-
-    glm::vec3 verticalTestPosition =
-        position;
-
-
-    verticalTestPosition.y +=
-        verticalVelocity * deltaTime;
+	// If the NPC has a target but is barely moving,
+	// count how long it has been stuck.
+	if (
+		hasTarget &&
+		movedDistance < 0.005f
+		)
+	{
+		stuckTimer +=
+			deltaTime;
+	}
+	else
+	{
+		stuckTimer =
+			0.0f;
+	}
 
 
-    // --------------------------------------------------------
-    // Vertical collision
-    // --------------------------------------------------------
-
-    if (!collidesWithWorld(
-        verticalTestPosition,
-        world
-    ))
-    {
-        position.y =
-            verticalTestPosition.y;
+	// Save current position for the next frame.
+	lastPosition =
+		position;
 
 
-        grounded =
-            false;
-    }
-    else
-    {
-        // A collision while falling means
-        // the NPC landed on something.
-        if (verticalVelocity < 0.0f)
-        {
-            grounded =
-                true;
-        }
-        else
-        {
-            grounded =
-                false;
-        }
+	// Give up on this target after one second
+	// without meaningful movement.
+	if (stuckTimer >= 1.0f)
+	{
+		hasTarget =
+			false;
 
 
-        verticalVelocity =
-            0.0f;
-    }
+		stuckTimer =
+			0.0f;
+	}
+
+
+	// --------------------------------------------------------
+	// Gravity
+	// --------------------------------------------------------
+
+	const float gravity =
+		-23.0f;
+
+
+	verticalVelocity +=
+		gravity * deltaTime;
+
+
+	glm::vec3 verticalTestPosition =
+		position;
+
+
+	verticalTestPosition.y +=
+		verticalVelocity * deltaTime;
+
+
+	// --------------------------------------------------------
+	// Vertical collision
+	// --------------------------------------------------------
+
+	if (!collidesWithWorld(
+		verticalTestPosition,
+		world
+	))
+	{
+		position.y =
+			verticalTestPosition.y;
+
+
+		grounded =
+			false;
+	}
+	else
+	{
+		// A collision while falling means
+		// the NPC landed on something.
+		if (verticalVelocity < 0.0f)
+		{
+			grounded =
+				true;
+		}
+		else
+		{
+			grounded =
+				false;
+		}
+
+
+		verticalVelocity =
+			0.0f;
+	}
 }
 
 
@@ -320,171 +352,171 @@ void NPC::update(
 // ============================================================
 
 void NPC::chooseRandomTarget(
-    const World& world
+	const World& world
 )
 {
-    std::vector<glm::vec3> possibleTargets;
+	std::vector<glm::vec3> possibleTargets;
 
 
-    int startX =
-        static_cast<int>(
-            std::floor(
-                position.x + 0.5f
-            )
-            );
+	int startX =
+		static_cast<int>(
+			std::floor(
+				position.x + 0.5f
+			)
+			);
 
 
-    int startY =
-        static_cast<int>(
-            std::floor(
-                position.y + 0.5f
-            )
-            );
+	int startY =
+		static_cast<int>(
+			std::floor(
+				position.y + 0.5f
+			)
+			);
 
 
-    int startZ =
-        static_cast<int>(
-            std::floor(
-                position.z + 0.5f
-            )
-            );
+	int startZ =
+		static_cast<int>(
+			std::floor(
+				position.z + 0.5f
+			)
+			);
 
 
-    // Search up to 3 blocks away horizontally.
-    for (int offsetX = -3; offsetX <= 3; offsetX++)
-    {
-        for (int offsetZ = -3; offsetZ <= 3; offsetZ++)
-        {
-            // Skip Jebub's current position.
-            if (
-                offsetX == 0 &&
-                offsetZ == 0
-                )
-            {
-                continue;
-            }
+	// Search up to 3 blocks away horizontally.
+	for (int offsetX = -3; offsetX <= 3; offsetX++)
+	{
+		for (int offsetZ = -3; offsetZ <= 3; offsetZ++)
+		{
+			// Skip Jebub's current position.
+			if (
+				offsetX == 0 &&
+				offsetZ == 0
+				)
+			{
+				continue;
+			}
 
 
-            int targetX =
-                startX + offsetX;
+			int targetX =
+				startX + offsetX;
 
 
-            int targetZ =
-                startZ + offsetZ;
+			int targetZ =
+				startZ + offsetZ;
 
 
-            // ------------------------------------------------
-            // Search downward for safe ground
-            // ------------------------------------------------
-            //
-            // drop = 0
-            // Same level.
-            //
-            // drop = 1
-            // One block lower.
-            //
-            // drop = 2
-            // Two blocks lower.
+			// ------------------------------------------------
+			// Search downward for safe ground
+			// ------------------------------------------------
+			//
+			// drop = 0
+			// Same level.
+			//
+			// drop = 1
+			// One block lower.
+			//
+			// drop = 2
+			// Two blocks lower.
 
-            for (int drop = 0; drop <= 2; drop++)
-            {
-                // Ground block Jebub would stand on.
-                int groundY =
-                    startY - 1 - drop;
-
-
-                // Space containing Jebub's feet/body.
-                int standingY =
-                    groundY + 1;
+			for (int drop = 0; drop <= 2; drop++)
+			{
+				// Ground block Jebub would stand on.
+				int groundY =
+					startY - 1 - drop;
 
 
-                // Space above Jebub.
-                int headY =
-                    standingY + 1;
+				// Space containing Jebub's feet/body.
+				int standingY =
+					groundY + 1;
 
 
-                // ------------------------------------------------
-                // Valid destination
-                // ------------------------------------------------
-
-                bool hasGround =
-                    world.isSolidAt(
-                        targetX,
-                        groundY,
-                        targetZ
-                    );
+				// Space above Jebub.
+				int headY =
+					standingY + 1;
 
 
-                bool standingSpaceClear =
-                    !world.hasBlock(
-                        targetX,
-                        standingY,
-                        targetZ
-                    );
+				// ------------------------------------------------
+				// Valid destination
+				// ------------------------------------------------
+
+				bool hasGround =
+					world.isSolidAt(
+						targetX,
+						groundY,
+						targetZ
+					);
 
 
-                bool headSpaceClear =
-                    !world.hasBlock(
-                        targetX,
-                        headY,
-                        targetZ
-                    );
+				bool standingSpaceClear =
+					!world.hasBlock(
+						targetX,
+						standingY,
+						targetZ
+					);
 
 
-                if (
-                    hasGround &&
-                    standingSpaceClear &&
-                    headSpaceClear
-                    )
-                {
-                    // Add this location as a possible target.
-                    possibleTargets.push_back(
-                        glm::vec3(
-                            static_cast<float>(targetX),
-
-                            position.y -
-                            static_cast<float>(drop),
-
-                            static_cast<float>(targetZ)
-                        )
-                    );
+				bool headSpaceClear =
+					!world.hasBlock(
+						targetX,
+						headY,
+						targetZ
+					);
 
 
-                    // We found the closest ground at this
-                    // X/Z location, so stop searching downward.
-                    break;
-                }
-            }
-        }
-    }
+				if (
+					hasGround &&
+					standingSpaceClear &&
+					headSpaceClear
+					)
+				{
+					// Add this location as a possible target.
+					possibleTargets.push_back(
+						glm::vec3(
+							static_cast<float>(targetX),
+
+							position.y -
+							static_cast<float>(drop),
+
+							static_cast<float>(targetZ)
+						)
+					);
 
 
-    // No valid destination found.
-    if (possibleTargets.empty())
-    {
-        hasTarget =
-            false;
-
-        return;
-    }
-
-
-    // Pick one valid target randomly.
-    int randomIndex =
-        std::rand() %
-        static_cast<int>(
-            possibleTargets.size()
-            );
+					// We found the closest ground at this
+					// X/Z location, so stop searching downward.
+					break;
+				}
+			}
+		}
+	}
 
 
-    targetPosition =
-        possibleTargets[
-            randomIndex
-        ];
+	// No valid destination found.
+	if (possibleTargets.empty())
+	{
+		hasTarget =
+			false;
+
+		return;
+	}
 
 
-    hasTarget =
-        true;
+	// Pick one valid target randomly.
+	int randomIndex =
+		std::rand() %
+		static_cast<int>(
+			possibleTargets.size()
+			);
+
+
+	targetPosition =
+		possibleTargets[
+			randomIndex
+		];
+
+
+	hasTarget =
+		true;
 }
 
 
@@ -498,174 +530,174 @@ void NPC::chooseRandomTarget(
 // ============================================================
 
 void NPC::moveTowardTarget(
-    float deltaTime,
-    const World& world
+	float deltaTime,
+	const World& world
 )
 {
-    glm::vec3 direction =
-        targetPosition -
-        position;
+	glm::vec3 direction =
+		targetPosition -
+		position;
 
 
-    // Jebubs only walk horizontally.
-    direction.y =
-        0.0f;
+	// Jebubs only walk horizontally.
+	direction.y =
+		0.0f;
 
 
-    float distance =
-        glm::length(
-            direction
-        );
+	float distance =
+		glm::length(
+			direction
+		);
 
 
-    // Close enough to count as arriving.
-    if (distance < 0.05f)
-    {
-        hasTarget =
-            false;
+	// Close enough to count as arriving.
+	if (distance < 0.05f)
+	{
+		hasTarget =
+			false;
 
-        return;
-    }
-
-
-    direction =
-        glm::normalize(
-            direction
-        );
+		return;
+	}
 
 
-    // Turn the NPC toward the direction
-    // it is currently walking.
-    facingYaw =
-        glm::degrees(
-            std::atan2(
-                direction.x,
-                direction.z
-            )
-        );
+	direction =
+		glm::normalize(
+			direction
+		);
 
 
-    glm::vec3 movement =
-        direction *
-        speed *
-        deltaTime;
+	// Turn the NPC toward the direction
+	// it is currently walking.
+	facingYaw =
+		glm::degrees(
+			std::atan2(
+				direction.x,
+				direction.z
+			)
+		);
 
 
-    // The NPC is actively trying to walk.
-    moving =
-        true;
+	glm::vec3 movement =
+		direction *
+		speed *
+		deltaTime;
 
-    // --------------------------------------------------------
+
+	// The NPC is actively trying to walk.
+	moving =
+		true;
+
+	// --------------------------------------------------------
 // Jump over a block in the way
 // --------------------------------------------------------
 
 // Only try to jump while standing on the ground.
-    if (grounded)
-    {
-        // Test a small step forward in the direction
-        // Jebub is currently trying to walk.
-        glm::vec3 forwardTest =
-            position +
-            direction * 0.35f;
+	if (grounded)
+	{
+		// Test a small step forward in the direction
+		// Jebub is currently trying to walk.
+		glm::vec3 forwardTest =
+			position +
+			direction * 0.35f;
 
-        // If moving forward would hit something...
-        if (collidesWithWorld(
-            forwardTest,
-            world
-        ))
-        {
-            // Test the same forward position,
-            // but one block higher.
-            glm::vec3 jumpClearanceTest =
-                forwardTest;
+		// If moving forward would hit something...
+		if (collidesWithWorld(
+			forwardTest,
+			world
+		))
+		{
+			// Test the same forward position,
+			// but one block higher.
+			glm::vec3 jumpClearanceTest =
+				forwardTest;
 
-            jumpClearanceTest.y +=
-                1.0f;
+			jumpClearanceTest.y +=
+				1.0f;
 
-            // If there is room above the obstacle,
-            // jump over it.
-            if (!collidesWithWorld(
-                jumpClearanceTest,
-                world
-            ))
-            {
-                verticalVelocity =
-                    7.0f;
+			// If there is room above the obstacle,
+			// jump over it.
+			if (!collidesWithWorld(
+				jumpClearanceTest,
+				world
+			))
+			{
+				verticalVelocity =
+					7.0f;
 
-                grounded =
-                    false;
-            }
-        }
-    }
+				grounded =
+					false;
+			}
+		}
+	}
 
-    // --------------------------------------------------------
-    // X-axis movement
-    // --------------------------------------------------------
+	// --------------------------------------------------------
+	// X-axis movement
+	// --------------------------------------------------------
 
-    glm::vec3 testPosition =
-        position;
-
-
-    testPosition.x +=
-        movement.x;
+	glm::vec3 testPosition =
+		position;
 
 
-    if (!collidesWithWorld(
-        testPosition,
-        world
-    ))
-    {
-        position.x =
-            testPosition.x;
-    }
+	testPosition.x +=
+		movement.x;
 
 
-    // --------------------------------------------------------
-    // Z-axis movement
-    // --------------------------------------------------------
-
-    testPosition =
-        position;
-
-
-    testPosition.z +=
-        movement.z;
+	if (!collidesWithWorld(
+		testPosition,
+		world
+	))
+	{
+		position.x =
+			testPosition.x;
+	}
 
 
-    if (!collidesWithWorld(
-        testPosition,
-        world
-    ))
-    {
-        position.z =
-            testPosition.z;
-    }
+	// --------------------------------------------------------
+	// Z-axis movement
+	// --------------------------------------------------------
+
+	testPosition =
+		position;
 
 
-    // --------------------------------------------------------
-    // Check whether the target was reached
-    // --------------------------------------------------------
-
-    glm::vec3 remainingDistance =
-        targetPosition -
-        position;
+	testPosition.z +=
+		movement.z;
 
 
-    remainingDistance.y =
-        0.0f;
+	if (!collidesWithWorld(
+		testPosition,
+		world
+	))
+	{
+		position.z =
+			testPosition.z;
+	}
 
 
-    if (
-        glm::length(
-            remainingDistance
-        )
-        <
-        0.05f
-        )
-    {
-        hasTarget =
-            false;
-    }
+	// --------------------------------------------------------
+	// Check whether the target was reached
+	// --------------------------------------------------------
+
+	glm::vec3 remainingDistance =
+		targetPosition -
+		position;
+
+
+	remainingDistance.y =
+		0.0f;
+
+
+	if (
+		glm::length(
+			remainingDistance
+		)
+		<
+		0.05f
+		)
+	{
+		hasTarget =
+			false;
+	}
 }
 
 
@@ -681,88 +713,88 @@ void NPC::moveTowardTarget(
 // ============================================================
 
 bool NPC::collidesWithWorld(
-    const glm::vec3& testPosition,
-    const World& world
+	const glm::vec3& testPosition,
+	const World& world
 ) const
 {
-    glm::vec3 npcMin =
-        testPosition -
-        (size / 2.0f);
+	glm::vec3 npcMin =
+		testPosition -
+		(size / 2.0f);
 
 
-    glm::vec3 npcMax =
-        testPosition +
-        (size / 2.0f);
+	glm::vec3 npcMax =
+		testPosition +
+		(size / 2.0f);
 
 
-    int minX =
-        static_cast<int>(
-            std::floor(
-                npcMin.x + 0.5f
-            )
-            );
+	int minX =
+		static_cast<int>(
+			std::floor(
+				npcMin.x + 0.5f
+			)
+			);
 
 
-    int maxX =
-        static_cast<int>(
-            std::floor(
-                npcMax.x + 0.5f
-            )
-            );
+	int maxX =
+		static_cast<int>(
+			std::floor(
+				npcMax.x + 0.5f
+			)
+			);
 
 
-    int minY =
-        static_cast<int>(
-            std::floor(
-                npcMin.y + 0.5f
-            )
-            );
+	int minY =
+		static_cast<int>(
+			std::floor(
+				npcMin.y + 0.5f
+			)
+			);
 
 
-    int maxY =
-        static_cast<int>(
-            std::floor(
-                npcMax.y + 0.5f
-            )
-            );
+	int maxY =
+		static_cast<int>(
+			std::floor(
+				npcMax.y + 0.5f
+			)
+			);
 
 
-    int minZ =
-        static_cast<int>(
-            std::floor(
-                npcMin.z + 0.5f
-            )
-            );
+	int minZ =
+		static_cast<int>(
+			std::floor(
+				npcMin.z + 0.5f
+			)
+			);
 
 
-    int maxZ =
-        static_cast<int>(
-            std::floor(
-                npcMax.z + 0.5f
-            )
-            );
+	int maxZ =
+		static_cast<int>(
+			std::floor(
+				npcMax.z + 0.5f
+			)
+			);
 
 
-    for (int x = minX; x <= maxX; x++)
-    {
-        for (int y = minY; y <= maxY; y++)
-        {
-            for (int z = minZ; z <= maxZ; z++)
-            {
-                if (world.isSolidAt(
-                    x,
-                    y,
-                    z
-                ))
-                {
-                    return true;
-                }
-            }
-        }
-    }
+	for (int x = minX; x <= maxX; x++)
+	{
+		for (int y = minY; y <= maxY; y++)
+		{
+			for (int z = minZ; z <= maxZ; z++)
+			{
+				if (world.isSolidAt(
+					x,
+					y,
+					z
+				))
+				{
+					return true;
+				}
+			}
+		}
+	}
 
 
-    return false;
+	return false;
 }
 
 
@@ -772,7 +804,7 @@ bool NPC::collidesWithWorld(
 
 const glm::vec3& NPC::getPosition() const
 {
-    return position;
+	return position;
 }
 
 
@@ -782,7 +814,7 @@ const glm::vec3& NPC::getPosition() const
 
 NPCType NPC::getType() const
 {
-    return type;
+	return type;
 }
 
 
@@ -792,7 +824,7 @@ NPCType NPC::getType() const
 
 float NPC::getFacingYaw() const
 {
-    return facingYaw;
+	return facingYaw;
 }
 
 
@@ -802,7 +834,7 @@ float NPC::getFacingYaw() const
 
 float NPC::getWalkAnimationTime() const
 {
-    return walkAnimationTime;
+	return walkAnimationTime;
 }
 
 
@@ -812,88 +844,115 @@ float NPC::getWalkAnimationTime() const
 
 bool NPC::isMoving() const
 {
-    return moving;
+	return moving;
 }
 
 bool NPC::raycastHit(
-    const glm::vec3& rayStart,
-    const glm::vec3& rayDirection,
-    float maxDistance,
-    float& hitDistance
+	const glm::vec3& rayStart,
+	const glm::vec3& rayDirection,
+	float maxDistance,
+	float& hitDistance
 ) const
 {
-    glm::vec3 hitboxMin = position - size * 0.5f;
-    glm::vec3 hitboxMax = position + size * 0.5f;
+	glm::vec3 hitboxMin = position - size * 0.5f;
+	glm::vec3 hitboxMax = position + size * 0.5f;
 
-    float nearestDistance = 0.0f;
-    float farthestDistance = maxDistance;
+	float nearestDistance = 0.0f;
+	float farthestDistance = maxDistance;
 
-    for (int axis = 0; axis < 3; axis++)
-    {
-        if (std::abs(rayDirection[axis]) < 0.0001f)
-        {
-            if (
-                rayStart[axis] < hitboxMin[axis] ||
-                rayStart[axis] > hitboxMax[axis]
-                )
-            {
-                return false;
-            }
+	for (int axis = 0; axis < 3; axis++)
+	{
+		if (std::abs(rayDirection[axis]) < 0.0001f)
+		{
+			if (
+				rayStart[axis] < hitboxMin[axis] ||
+				rayStart[axis] > hitboxMax[axis]
+				)
+			{
+				return false;
+			}
 
-            continue;
-        }
+			continue;
+		}
 
-        float firstDistance =
-            (hitboxMin[axis] - rayStart[axis]) /
-            rayDirection[axis];
+		float firstDistance =
+			(hitboxMin[axis] - rayStart[axis]) /
+			rayDirection[axis];
 
-        float secondDistance =
-            (hitboxMax[axis] - rayStart[axis]) /
-            rayDirection[axis];
+		float secondDistance =
+			(hitboxMax[axis] - rayStart[axis]) /
+			rayDirection[axis];
 
-        if (firstDistance > secondDistance)
-        {
-            std::swap(firstDistance, secondDistance);
-        }
+		if (firstDistance > secondDistance)
+		{
+			std::swap(firstDistance, secondDistance);
+		}
 
-        nearestDistance =
-            std::max(nearestDistance, firstDistance);
+		nearestDistance =
+			std::max(nearestDistance, firstDistance);
 
-        farthestDistance =
-            std::min(farthestDistance, secondDistance);
+		farthestDistance =
+			std::min(farthestDistance, secondDistance);
 
-        if (nearestDistance > farthestDistance)
-        {
-            return false;
-        }
-    }
+		if (nearestDistance > farthestDistance)
+		{
+			return false;
+		}
+	}
 
-    hitDistance = nearestDistance;
-    return true;
+	hitDistance = nearestDistance;
+	return true;
 }
 
 
 void NPC::applyKnockback(
-    const glm::vec3& punchSource,
-    float strength
+	const glm::vec3& punchSource,
+	float strength
 )
 {
-    glm::vec3 direction =
-        position - punchSource;
+	glm::vec3 direction =
+		position - punchSource;
 
-    direction.y = 0.0f;
+	direction.y = 0.0f;
 
-    if (glm::length(direction) < 0.001f)
-    {
-        return;
-    }
+	if (glm::length(direction) < 0.001f)
+	{
+		return;
+	}
 
-    knockbackVelocity =
-        glm::normalize(direction) * strength;
+	knockbackVelocity =
+		glm::normalize(direction) * strength;
 
-    verticalVelocity =
-        std::max(verticalVelocity, 3.5f);
+	verticalVelocity =
+		std::max(verticalVelocity, 3.5f);
 
-    hasTarget = false;
-    stuckTimer = 0.0f;
+	hasTarget = false;
+	stuckTimer = 0.0f;
+}
+
+void NPC::takeDamage(int amount)
+{
+	if (amount <= 0 || health <= 0)
+	{
+		return;
+	}
+
+	health -= amount;
+
+	if (health < 0)
+	{
+		health = 0;
+	}
+}
+
+
+bool NPC::isDead() const
+{
+	return health <= 0;
+}
+
+
+ItemType NPC::getDropItem() const
+{
+	return dropItem;
 }

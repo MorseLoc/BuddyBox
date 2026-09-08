@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 
+#include "Item.h"
+
 
 // Forward declaration.
 //
@@ -112,6 +114,15 @@ public:
         float strength
     );
 
+    // Removes health from this NPC.
+    void takeDamage(int amount);
+
+    // Returns true when this NPC has no health left.
+    bool isDead() const;
+
+    // Returns the item this NPC drops on death.
+    ItemType getDropItem() const;
+
 
 private:
     // --------------------------------------------------------
@@ -120,6 +131,14 @@ private:
 
     // What kind of NPC this is.
     NPCType type;
+
+    // Health and death-drop settings.
+    int maxHealth;
+    int health;
+    ItemType dropItem;
+
+    // Gives each NPC type its own stats.
+    void configureForType();
 
 
     // --------------------------------------------------------

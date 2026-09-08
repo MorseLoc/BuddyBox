@@ -672,10 +672,85 @@ int main()
             focused && !inventoryOpen && worldMouseArmed;
 
         // ----------------------------------------------------
+// Find the NPC under the crosshair
+// ----------------------------------------------------
+
+        int hitNPCIndex = -1;
+        float closestNPCDistance = 5.0f;
+
+        if (allowWorldMouse && leftMousePressed)
+        {
+            for (
+                int index = 0;
+                index < static_cast<int>(npcs.size());
+                index++
+                )
+            {
+                float hitDistance = 0.0f;
+
+                if (
+                    npcs[index].raycastHit(
+                        camera.getPosition(),
+                        camera.getFront(),
+                        5.0f,
+                        hitDistance
+                    ) &&
+                    hitDistance < closestNPCDistance
+                    )
+                {
+                    closestNPCDistance = hitDistance;
+                    hitNPCIndex = index;
+                }
+            }
+        }
+
+        // ----------------------------------------------------
+        // Punch NPC
+        // ----------------------------------------------------
+
+        if (
+            hitNPCIndex >= 0 &&
+            !leftMouseWasPressed
+            )
+        {
+            NPC& hitNPC = npcs[hitNPCIndex];
+
+            hitNPC.applyKnockback(
+                player.position,
+                7.0f
+            );
+
+            hitNPC.takeDamage(1);
+
+            blockBreakTimer = 0.0f;
+            blockBreakProgress = 0.0f;
+            isBreakingBlock = false;
+
+            if (hitNPC.isDead())
+            {
+                if (hitNPC.getDropItem() != ItemType::None)
+                {
+                    droppedItems.emplace_back(
+                        hitNPC.getDropItem(),
+                        hitNPC.getPosition()
+                    );
+                }
+
+                npcs.erase(
+                    npcs.begin() + hitNPCIndex
+                );
+            }
+        }
+
+        // ----------------------------------------------------
         // Break blocks
         // ----------------------------------------------------
 
-        if (allowWorldMouse && leftMousePressed)
+        if (
+            allowWorldMouse &&
+            leftMousePressed &&
+            hitNPCIndex < 0
+            )
         {
             int hitX;
             int hitY;
@@ -795,45 +870,6 @@ int main()
             isBreakingBlock = false;
         }
 
-        NPC* hitNPC = nullptr;
-        float closestNPCDistance = 5.0f;
-
-        if (
-            allowWorldMouse &&
-            leftMousePressed &&
-            hitNPC == nullptr
-            )
-        {
-            for (NPC& npc : npcs)
-            {
-                float hitDistance = 0.0f;
-
-                if (
-                    npc.raycastHit(
-                        camera.getPosition(),
-                        camera.getFront(),
-                        5.0f,
-                        hitDistance
-                    ) &&
-                    hitDistance < closestNPCDistance
-                    )
-                {
-                    closestNPCDistance = hitDistance;
-                    hitNPC = &npc;
-                }
-            }
-        }
-
-        if (
-            hitNPC != nullptr &&
-            !leftMouseWasPressed
-            )
-        {
-            hitNPC->applyKnockback(
-                player.position,
-                7.0f
-            );
-        }
 
         // ----------------------------------------------------
         // Place blocks
