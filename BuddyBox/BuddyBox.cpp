@@ -1088,7 +1088,7 @@ int main()
                 itemAtlasTexture,
                 numberAtlasTexture,
                 inventory,
-                6,
+                8,
                 mouseUiX,
                 mouseUiY,
                 focused ? hoveredSlot : -1
@@ -1102,7 +1102,7 @@ int main()
                 numberAtlasTexture,
                 inventory.getSelectedSlot(),
                 inventory,
-                6
+                8
             );
         }
 
