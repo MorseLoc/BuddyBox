@@ -31,6 +31,7 @@
 #include "ChunkMesh.h"
 #include "DroppedItem.h"
 #include "lighting.h"
+#include "Skybox.h"
 
 
 // ============================================================
@@ -264,6 +265,16 @@ int main()
     if (!uiRenderer.initialize())
     {
         std::cout << "Failed to initialize UI renderer.\n";
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return -1;
+    }
+
+    Skybox skybox;
+
+    if (!skybox.initialize())
+    {
+        std::cout << "Skybox failed to initialize.\n";
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
@@ -1004,6 +1015,8 @@ int main()
             GL_DEPTH_BUFFER_BIT
         );
 
+        skybox.draw(view, projection);
+
         // ----------------------------------------------------
         // Prepare world rendering
         // ----------------------------------------------------
@@ -1207,6 +1220,8 @@ int main()
 
     // Delete GPU chunk resources before destroying the context.
     chunkMeshes.clear();
+
+    skybox.cleanup();
 
     glfwDestroyWindow(window);
     glfwTerminate();

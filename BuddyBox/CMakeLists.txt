@@ -40,6 +40,8 @@ add_executable(BuddyBox
     "lighting.cpp"
     "lighting.h"
     "InventoryLayout.h"
+    "Skybox.h"
+    "Skybox.cpp"
 )
 
 configure_file(
