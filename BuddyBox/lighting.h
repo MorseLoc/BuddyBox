@@ -259,6 +259,15 @@ private:
         const World& world
     );
 
+    // Update only light affected by one edited block.
+    void updateBlockLight(
+        const World& world,
+        int x,
+        int y,
+        int z,
+        std::set<std::tuple<int, int, int>>& dirtyChunks
+    );
+
     // --------------------------------------------------------
     // Utility
     // --------------------------------------------------------

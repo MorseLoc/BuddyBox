@@ -509,6 +509,9 @@ void Lighting::calculateSkyLight(const World& world)
             propagationQueue.push({ nx, ny, nz });
         }
     }
+
+    calculateBlockLight(world);
+
 }
 
 void Lighting::calculateBlockLight(
@@ -1118,7 +1121,7 @@ std::set<std::tuple<int, int, int>> Lighting::updateBlockChange(
     // Initialize any new lighting regions around the edit.
     extendSkyLightArea(world, x, y, z, dirtyChunks);
 
-    calculateBlockLight(world);
+    updateBlockLight(world, x, y, z, dirtyChunks);
 
     return dirtyChunks;
 }
@@ -1308,6 +1311,112 @@ void Lighting::extendSkyLightArea(
             addDirtyChunkForCell(dirtyChunks, nx, ny, nz);
 
             queue.push({ nx, ny, nz });
+        }
+    }
+}
+
+void Lighting::updateBlockLight(
+    const World& world,
+    int x,
+    int y,
+    int z,
+    std::set<std::tuple<int, int, int>>& dirtyChunks
+)
+{
+    using Position = std::tuple<int, int, int>;
+
+    std::queue<Position> queue;
+    std::set<Position> pending;
+
+    const int offsets[6][3] =
+    {
+        { 1, 0, 0 },
+        {-1, 0, 0 },
+        { 0, 1, 0 },
+        { 0,-1, 0 },
+        { 0, 0, 1 },
+        { 0, 0,-1 }
+    };
+
+    // Avoid adding the same cell to the queue twice.
+    auto enqueue = [&](int px, int py, int pz)
+        {
+            Position position = std::make_tuple(px, py, pz);
+
+            if (pending.insert(position).second)
+            {
+                queue.push(position);
+            }
+        };
+
+    enqueue(x, y, z);
+
+    for (const auto& offset : offsets)
+    {
+        enqueue(
+            x + offset[0],
+            y + offset[1],
+            z + offset[2]
+        );
+    }
+
+    while (!queue.empty())
+    {
+        Position position = queue.front();
+        queue.pop();
+        pending.erase(position);
+
+        int px = std::get<0>(position);
+        int py = std::get<1>(position);
+        int pz = std::get<2>(position);
+
+        auto block = world.blocks.find(position);
+
+        int bestLight = 0;
+        bool solid = false;
+
+        if (block != world.blocks.end())
+        {
+            bestLight = clampLight(block->second.emittedLight);
+            solid = block->second.solid;
+        }
+
+        // Air and non-solid bulbs receive neighboring light.
+        if (!solid)
+        {
+            for (const auto& offset : offsets)
+            {
+                int incomingLight = getBlockLight(
+                    px + offset[0],
+                    py + offset[1],
+                    pz + offset[2]
+                ) - 1;
+
+                if (incomingLight > bestLight)
+                {
+                    bestLight = incomingLight;
+                }
+            }
+        }
+
+        if (getBlockLight(px, py, pz) == bestLight)
+        {
+            continue;
+        }
+
+        setBlockLight(px, py, pz, bestLight);
+
+        // Includes neighboring meshes at chunk boundaries.
+        addDirtyChunkForCell(dirtyChunks, px, py, pz);
+
+        // A changed cell may brighten or darken its neighbors.
+        for (const auto& offset : offsets)
+        {
+            enqueue(
+                px + offset[0],
+                py + offset[1],
+                pz + offset[2]
+            );
         }
     }
 }

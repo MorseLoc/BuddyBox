@@ -141,31 +141,49 @@ void ChunkMesh::build(
                 // Decide whether the neighboring block hides this face.
                 auto shouldDrawFace = [&](int nx, int ny, int nz)
                     {
-                        auto neighbor = world.blocks.find(
-                            std::make_tuple(nx, ny, nz)
-                        );
-
-                        // Empty space does not hide a face.
-                        if (neighbor == world.blocks.end() ||
-                            !neighbor->second.solid)
+                        // Small centered blocks don't touch cell boundaries.
+                        // Keep their faces even beside a full-size block.
+                        if (
+                            block.size.x < 1.0f ||
+                            block.size.y < 1.0f ||
+                            block.size.z < 1.0f
+                            )
                         {
                             return true;
                         }
 
-                        // Normal solid blocks hide the face beside them.
-                        if (neighbor->second.type != BlockType::Leaf)
+                        auto neighbor = world.blocks.find(
+                            std::make_tuple(nx, ny, nz)
+                        );
+
+                        if (neighbor == world.blocks.end())
+                        {
+                            return true;
+                        }
+
+                        const Block& adjacent = neighbor->second;
+
+                        // Small blocks cannot completely hide this face.
+                        if (
+                            !adjacent.solid ||
+                            adjacent.size.x < 1.0f ||
+                            adjacent.size.y < 1.0f ||
+                            adjacent.size.z < 1.0f
+                            )
+                        {
+                            return true;
+                        }
+
+                        if (adjacent.type != BlockType::Leaf)
                         {
                             return false;
                         }
 
-                        // Keep wood, stone, etc. visible behind leaf holes.
                         if (block.type != BlockType::Leaf)
                         {
                             return true;
                         }
 
-                        // Between two leaves, keep one shared face.
-                        // The current renderer draws both sides of that face.
                         return nx > x || ny > y || nz > z;
                     };
 
