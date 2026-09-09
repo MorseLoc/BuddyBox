@@ -1328,6 +1328,9 @@ void Lighting::updateBlockLight(
     std::queue<Position> queue;
     std::set<Position> pending;
 
+    // Remember each cell's light before this update.
+    std::map<Position, int> originalLight;
+
     const int offsets[6][3] =
     {
         { 1, 0, 0 },
@@ -1399,15 +1402,18 @@ void Lighting::updateBlockLight(
             }
         }
 
-        if (getBlockLight(px, py, pz) == bestLight)
+        int oldLight = getBlockLight(px, py, pz);
+
+        if (oldLight == bestLight)
         {
             continue;
         }
 
-        setBlockLight(px, py, pz, bestLight);
+        // emplace preserves the first value if this cell
+        // changes several times while light settles.
+        originalLight.emplace(position, oldLight);
 
-        // Includes neighboring meshes at chunk boundaries.
-        addDirtyChunkForCell(dirtyChunks, px, py, pz);
+        setBlockLight(px, py, pz, bestLight);
 
         // A changed cell may brighten or darken its neighbors.
         for (const auto& offset : offsets)
@@ -1416,6 +1422,29 @@ void Lighting::updateBlockLight(
                 px + offset[0],
                 py + offset[1],
                 pz + offset[2]
+            );
+        }
+    }
+
+    // Refresh meshes only when their final visible light changed.
+    for (const auto& entry : originalLight)
+    {
+        int px = std::get<0>(entry.first);
+        int py = std::get<1>(entry.first);
+        int pz = std::get<2>(entry.first);
+
+        int sky = getSkyLight(px, py, pz);
+
+        int oldBrightness = std::max(sky, entry.second);
+        int newBrightness = std::max(
+            sky,
+            getBlockLight(px, py, pz)
+        );
+
+        if (oldBrightness != newBrightness)
+        {
+            addDirtyChunkForCell(
+                dirtyChunks, px, py, pz
             );
         }
     }

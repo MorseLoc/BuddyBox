@@ -4,7 +4,8 @@
 #include "lighting.h"
 
 #include <glad/glad.h>
-
+#include <algorithm>
+#include <algorithm>
 #include <tuple>
 
 
@@ -229,7 +230,7 @@ void ChunkMesh::build(
                         1,
                         block.textureRow,
                         skyLight,
-                        blockLight
+                        std::max(blockLight, block.emittedLight)
                     );
                 }
 
@@ -275,7 +276,7 @@ void ChunkMesh::build(
                         2,
                         block.textureRow,
                         skyLight,
-                        blockLight
+                        std::max(blockLight, block.emittedLight)
                     );
                 }
 
@@ -321,7 +322,7 @@ void ChunkMesh::build(
                         3,
                         block.textureRow,
                         skyLight,
-                        blockLight
+                        std::max(blockLight, block.emittedLight)
                     );
                 }
 
@@ -367,7 +368,7 @@ void ChunkMesh::build(
                         4,
                         block.textureRow,
                         skyLight,
-                        blockLight
+                        std::max(blockLight, block.emittedLight)
                     );
                 }
 
@@ -413,7 +414,7 @@ void ChunkMesh::build(
                         0,
                         block.textureRow,
                         skyLight,
-                        blockLight
+                        std::max(blockLight, block.emittedLight)
                     );
                 }
 
@@ -459,7 +460,7 @@ void ChunkMesh::build(
                         5,
                         block.textureRow,
                         skyLight,
-                        blockLight
+                        std::max(blockLight, block.emittedLight)
                     );
                 }
             }

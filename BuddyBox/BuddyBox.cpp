@@ -186,87 +186,74 @@ int main()
             }
         };
 
-    // Rebuild one chunk after a change.
-    auto rebuildChunk = [&](int chunkX, int chunkY, int chunkZ)
+    // Update an existing mesh, or create it when first needed.
+    auto rebuildChunk = [&](int cx, int cy, int cz)
         {
-            auto chunk = std::make_unique<ChunkMesh>();
+            auto position = std::make_tuple(cx, cy, cz);
+            auto& mesh = chunkMeshes[position];
 
-            chunk->build(
-                world,
-                lighting,
-                chunkX,
-                chunkY,
-                chunkZ
-            );
+            if (!mesh)
+            {
+                mesh = std::make_unique<ChunkMesh>();
+            }
 
-            chunkMeshes[
-                std::make_tuple(chunkX, chunkY, chunkZ)
-            ] = std::move(chunk);
+            mesh->build(world, lighting, cx, cy, cz);
         };
 
-    // Rebuild the edited chunk and any shared boundary faces.
-    auto rebuildChunksAroundBlock =
-        [&](int blockX, int blockY, int blockZ)
-        {
-            int chunkX = getChunkCoordinate(blockX);
-            int chunkY = getChunkCoordinate(blockY);
-            int chunkZ = getChunkCoordinate(blockZ);
-
-            rebuildChunk(chunkX, chunkY, chunkZ);
-
-            int localX = blockX - chunkX * ChunkMesh::CHUNK_SIZE;
-            int localY = blockY - chunkY * ChunkMesh::CHUNK_SIZE;
-            int localZ = blockZ - chunkZ * ChunkMesh::CHUNK_SIZE;
-
-            if (localX == 0)
-            {
-                rebuildChunk(chunkX - 1, chunkY, chunkZ);
-            }
-
-            if (localX == ChunkMesh::CHUNK_SIZE - 1)
-            {
-                rebuildChunk(chunkX + 1, chunkY, chunkZ);
-            }
-
-            if (localY == 0)
-            {
-                rebuildChunk(chunkX, chunkY - 1, chunkZ);
-            }
-
-            if (localY == ChunkMesh::CHUNK_SIZE - 1)
-            {
-                rebuildChunk(chunkX, chunkY + 1, chunkZ);
-            }
-
-            if (localZ == 0)
-            {
-                rebuildChunk(chunkX, chunkY, chunkZ - 1);
-            }
-
-            if (localZ == ChunkMesh::CHUNK_SIZE - 1)
-            {
-                rebuildChunk(chunkX, chunkY, chunkZ + 1);
-            }
-        };
-
-    // Refresh meshes whose stored lighting changed.
-    auto rebuildLightingChunks = [&](
-        const std::set<std::tuple<int, int, int>>& dirtyChunks
+    // Combine geometry and lighting changes into one rebuild list.
+    auto rebuildChangedChunks = [&](
+        int x,
+        int y,
+        int z,
+        std::set<std::tuple<int, int, int>>& dirtyChunks
         )
         {
-            for (const auto& chunkPosition : dirtyChunks)
+            int cx = getChunkCoordinate(x);
+            int cy = getChunkCoordinate(y);
+            int cz = getChunkCoordinate(z);
+
+            auto editedChunk = std::make_tuple(cx, cy, cz);
+            dirtyChunks.insert(editedChunk);
+
+            int lx = x - cx * ChunkMesh::CHUNK_SIZE;
+            int ly = y - cy * ChunkMesh::CHUNK_SIZE;
+            int lz = z - cz * ChunkMesh::CHUNK_SIZE;
+
+            if (lx == 0)
+                dirtyChunks.emplace(cx - 1, cy, cz);
+
+            if (lx == ChunkMesh::CHUNK_SIZE - 1)
+                dirtyChunks.emplace(cx + 1, cy, cz);
+
+            if (ly == 0)
+                dirtyChunks.emplace(cx, cy - 1, cz);
+
+            if (ly == ChunkMesh::CHUNK_SIZE - 1)
+                dirtyChunks.emplace(cx, cy + 1, cz);
+
+            if (lz == 0)
+                dirtyChunks.emplace(cx, cy, cz - 1);
+
+            if (lz == ChunkMesh::CHUNK_SIZE - 1)
+                dirtyChunks.emplace(cx, cy, cz + 1);
+
+            for (const auto& position : dirtyChunks)
             {
-                // Air needs lighting storage, but not its own GPU mesh.
-                if (chunkMeshes.find(chunkPosition) == chunkMeshes.end())
+                // Allow a new mesh where the player just placed a block.
+                // Other empty chunks do not need meshes.
+                if (
+                    position != editedChunk &&
+                    chunkMeshes.find(position) == chunkMeshes.end()
+                    )
                 {
                     continue;
                 }
 
-                int chunkX = std::get<0>(chunkPosition);
-                int chunkY = std::get<1>(chunkPosition);
-                int chunkZ = std::get<2>(chunkPosition);
-
-                rebuildChunk(chunkX, chunkY, chunkZ);
+                rebuildChunk(
+                    std::get<0>(position),
+                    std::get<1>(position),
+                    std::get<2>(position)
+                );
             }
         };
 
@@ -845,8 +832,9 @@ int main()
                                 hitZ
                             );
 
-                        rebuildChunksAroundBlock(hitX, hitY, hitZ);
-                        rebuildLightingChunks(dirtyLightChunks);
+                        rebuildChangedChunks(
+                            hitX, hitY, hitZ, dirtyLightChunks
+                        );
 
                         blockBreakTimer = 0.0f;
                         blockBreakProgress = 0.0f;
@@ -961,13 +949,12 @@ int main()
 
                         inventory.removeSelectedItem();
 
-                        rebuildChunksAroundBlock(
+                        rebuildChangedChunks(
                             previousX,
                             previousY,
-                            previousZ
+                            previousZ,
+                            dirtyLightChunks
                         );
-
-                        rebuildLightingChunks(dirtyLightChunks);
                     }
                 }
             }
