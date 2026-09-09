@@ -8,6 +8,7 @@
 #include <tuple>
 #include <map>
 #include <cmath>
+#include <deque>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -143,6 +144,14 @@ int main()
                 ) / ChunkMesh::CHUNK_SIZE;
         };
 
+    // Rebuild requests must exist for the whole game,
+    // not only while the initial world is loading.
+    std::deque<std::tuple<int, int, int>>
+        pendingChunkRebuilds;
+
+    std::set<std::tuple<int, int, int>>
+        queuedChunkRebuilds;
+
     // Build all meshes when initially loading the world.
     auto rebuildAllChunks = [&]()
         {
@@ -181,9 +190,7 @@ int main()
                     chunkZ
                 );
 
-                chunkMeshes[
-                    std::make_tuple(chunkX, chunkY, chunkZ)
-                ] = std::move(chunk);
+                chunkMeshes[chunkPosition] = std::move(chunk);
             }
         };
 
@@ -199,6 +206,26 @@ int main()
             }
 
             mesh->build(world, lighting, cx, cy, cz);
+        };
+
+    // Schedule a chunk rebuild for a later frame.
+    // The set prevents duplicate requests.
+    auto queueChunkRebuild = [&](
+        int chunkX,
+        int chunkY,
+        int chunkZ
+        )
+        {
+            auto position = std::make_tuple(
+                chunkX,
+                chunkY,
+                chunkZ
+            );
+
+            if (queuedChunkRebuilds.insert(position).second)
+            {
+                pendingChunkRebuilds.push_back(position);
+            }
         };
 
     // Combine geometry and lighting changes into one rebuild list.
@@ -221,27 +248,39 @@ int main()
             int lz = z - cz * ChunkMesh::CHUNK_SIZE;
 
             if (lx == 0)
+            {
                 dirtyChunks.emplace(cx - 1, cy, cz);
+            }
 
             if (lx == ChunkMesh::CHUNK_SIZE - 1)
+            {
                 dirtyChunks.emplace(cx + 1, cy, cz);
+            }
 
             if (ly == 0)
+            {
                 dirtyChunks.emplace(cx, cy - 1, cz);
+            }
 
             if (ly == ChunkMesh::CHUNK_SIZE - 1)
+            {
                 dirtyChunks.emplace(cx, cy + 1, cz);
+            }
 
             if (lz == 0)
+            {
                 dirtyChunks.emplace(cx, cy, cz - 1);
+            }
 
             if (lz == ChunkMesh::CHUNK_SIZE - 1)
+            {
                 dirtyChunks.emplace(cx, cy, cz + 1);
+            }
 
             for (const auto& position : dirtyChunks)
             {
-                // Allow a new mesh where the player just placed a block.
-                // Other empty chunks do not need meshes.
+                // The edited chunk may be new because a block
+                // was just placed there.
                 if (
                     position != editedChunk &&
                     chunkMeshes.find(position) == chunkMeshes.end()
@@ -250,7 +289,7 @@ int main()
                     continue;
                 }
 
-                rebuildChunk(
+                queueChunkRebuild(
                     std::get<0>(position),
                     std::get<1>(position),
                     std::get<2>(position)
@@ -987,6 +1026,55 @@ int main()
             }
         }
 
+        // Spread bulb-light calculations over several frames.
+        const int LIGHT_CELLS_TO_PROCESS_PER_FRAME = 1000;
+
+        auto finishedLightChunks =
+            lighting.processBlockLightUpdates(
+                world,
+                LIGHT_CELLS_TO_PROCESS_PER_FRAME
+            );
+
+        for (const auto& chunkPosition : finishedLightChunks)
+        {
+            // Air-only chunks do not need a GPU mesh.
+            if (
+                chunkMeshes.find(chunkPosition) ==
+                chunkMeshes.end()
+                )
+            {
+                continue;
+            }
+
+            queueChunkRebuild(
+                std::get<0>(chunkPosition),
+                std::get<1>(chunkPosition),
+                std::get<2>(chunkPosition)
+            );
+        }
+
+        // Spread expensive chunk rebuilding over several frames.
+        const int CHUNKS_TO_REBUILD_PER_FRAME = 3;
+
+        for (
+            int rebuilt = 0;
+            rebuilt < CHUNKS_TO_REBUILD_PER_FRAME &&
+            !pendingChunkRebuilds.empty();
+            rebuilt++
+            )
+        {
+            auto position = pendingChunkRebuilds.front();
+
+            pendingChunkRebuilds.pop_front();
+            queuedChunkRebuilds.erase(position);
+
+            rebuildChunk(
+                std::get<0>(position),
+                std::get<1>(position),
+                std::get<2>(position)
+            );
+        }
+
         leftMouseWasPressed = leftMousePressed;
         rightMouseWasPressed = rightMousePressed;
 
@@ -1220,7 +1308,7 @@ int main()
                 droppedItem.position,
                 itemAtlasTexture,
                 item.textureRow,
-                8,
+                9,
                 itemYaw
             );
         }
@@ -1236,7 +1324,7 @@ int main()
                 itemAtlasTexture,
                 numberAtlasTexture,
                 inventory,
-                8,
+                9,
                 mouseUiX,
                 mouseUiY,
                 focused ? hoveredSlot : -1
@@ -1250,7 +1338,7 @@ int main()
                 numberAtlasTexture,
                 inventory.getSelectedSlot(),
                 inventory,
-                8
+                9
             );
         }
 

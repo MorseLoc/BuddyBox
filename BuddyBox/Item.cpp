@@ -105,9 +105,8 @@ Item::Item(
     }
     else if (type == ItemType::Bulb)
     {
-        // Temporary: uses the Pebble icon.
-        // We can give the Bulb its own Itemdex art later.
-        textureRow = 4;
+       
+        textureRow = 8;
 
         feature = ItemFeature::PlaceBlock;
 

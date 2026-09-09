@@ -26,6 +26,9 @@ struct Player
     // Collision-box width, height, and depth.
     glm::vec3 size;
 
+    // Player cannot move past these X/Z world coordinates.
+    static constexpr float WORLD_BORDER = 56.0f;
+
 
     // --------------------------------------------------------
     // Movement properties

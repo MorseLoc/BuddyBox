@@ -6,6 +6,7 @@
 #include <tuple>
 #include <set>
 #include <utility>
+#include <queue>
 
 
 struct World;
@@ -128,6 +129,13 @@ public:
         int z
     );
 
+    // Process part of any pending bulb-light update.
+//
+// Returns chunks that need rebuilding once the update finishes.
+    std::set<std::tuple<int, int, int>> processBlockLightUpdates(
+        const World& world,
+        int maximumCells
+    );
 
     // --------------------------------------------------------
     // Clear stored lighting
@@ -260,13 +268,25 @@ private:
     );
 
     // Update only light affected by one edited block.
-    void updateBlockLight(
-        const World& world,
+        // Start or extend an asynchronous block-light update.
+    void beginBlockLightUpdate(
         int x,
         int y,
-        int z,
-        std::set<std::tuple<int, int, int>>& dirtyChunks
+        int z
     );
+
+    using LightCell = std::tuple<int, int, int>;
+
+    // Cells still waiting to have their light recalculated.
+    std::queue<LightCell> pendingBlockLightCells;
+
+    // Prevents the same cell being queued repeatedly.
+    std::set<LightCell> queuedBlockLightCells;
+
+    // Stores each changed cell's first light value until
+    // the entire lighting update settles.
+    std::map<LightCell, int> originalBlockLight;
+
 
     // --------------------------------------------------------
     // Utility

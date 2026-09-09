@@ -243,6 +243,10 @@ int Lighting::getLight(
 
 void Lighting::clear()
 {
+    pendingBlockLightCells = {};
+    queuedBlockLightCells.clear();
+    originalBlockLight.clear();
+
     lightChunks.clear();
     solidColumnHeights.clear();
 }
@@ -1121,7 +1125,7 @@ std::set<std::tuple<int, int, int>> Lighting::updateBlockChange(
     // Initialize any new lighting regions around the edit.
     extendSkyLightArea(world, x, y, z, dirtyChunks);
 
-    updateBlockLight(world, x, y, z, dirtyChunks);
+    beginBlockLightUpdate(x, y, z);
 
     return dirtyChunks;
 }
@@ -1315,21 +1319,54 @@ void Lighting::extendSkyLightArea(
     }
 }
 
-void Lighting::updateBlockLight(
-    const World& world,
+void Lighting::beginBlockLightUpdate(
     int x,
     int y,
-    int z,
-    std::set<std::tuple<int, int, int>>& dirtyChunks
+    int z
 )
 {
-    using Position = std::tuple<int, int, int>;
+    const int offsets[6][3] =
+    {
+        { 1, 0, 0 },
+        {-1, 0, 0 },
+        { 0, 1, 0 },
+        { 0,-1, 0 },
+        { 0, 0, 1 },
+        { 0, 0,-1 }
+    };
 
-    std::queue<Position> queue;
-    std::set<Position> pending;
+    auto enqueue = [&](int px, int py, int pz)
+        {
+            LightCell position = std::make_tuple(px, py, pz);
 
-    // Remember each cell's light before this update.
-    std::map<Position, int> originalLight;
+            if (queuedBlockLightCells.insert(position).second)
+            {
+                pendingBlockLightCells.push(position);
+            }
+        };
+
+    // The changed cell and its neighbors are the only
+    // places where a new light path can begin.
+    enqueue(x, y, z);
+
+    for (const auto& offset : offsets)
+    {
+        enqueue(
+            x + offset[0],
+            y + offset[1],
+            z + offset[2]
+        );
+    }
+}
+
+
+std::set<std::tuple<int, int, int>>
+Lighting::processBlockLightUpdates(
+    const World& world,
+    int maximumCells
+)
+{
+    std::set<std::tuple<int, int, int>> dirtyChunks;
 
     const int offsets[6][3] =
     {
@@ -1341,37 +1378,33 @@ void Lighting::updateBlockLight(
         { 0, 0,-1 }
     };
 
-    // Avoid adding the same cell to the queue twice.
     auto enqueue = [&](int px, int py, int pz)
         {
-            Position position = std::make_tuple(px, py, pz);
+            LightCell position = std::make_tuple(px, py, pz);
 
-            if (pending.insert(position).second)
+            if (queuedBlockLightCells.insert(position).second)
             {
-                queue.push(position);
+                pendingBlockLightCells.push(position);
             }
         };
 
-    enqueue(x, y, z);
+    int processedCells = 0;
 
-    for (const auto& offset : offsets)
+    while (
+        !pendingBlockLightCells.empty() &&
+        processedCells < maximumCells
+        )
     {
-        enqueue(
-            x + offset[0],
-            y + offset[1],
-            z + offset[2]
-        );
-    }
+        LightCell position = pendingBlockLightCells.front();
 
-    while (!queue.empty())
-    {
-        Position position = queue.front();
-        queue.pop();
-        pending.erase(position);
+        pendingBlockLightCells.pop();
+        queuedBlockLightCells.erase(position);
 
-        int px = std::get<0>(position);
-        int py = std::get<1>(position);
-        int pz = std::get<2>(position);
+        processedCells++;
+
+        int x = std::get<0>(position);
+        int y = std::get<1>(position);
+        int z = std::get<2>(position);
 
         auto block = world.blocks.find(position);
 
@@ -1380,19 +1413,23 @@ void Lighting::updateBlockLight(
 
         if (block != world.blocks.end())
         {
-            bestLight = clampLight(block->second.emittedLight);
+            bestLight = clampLight(
+                block->second.emittedLight
+            );
+
             solid = block->second.solid;
         }
 
-        // Air and non-solid bulbs receive neighboring light.
+        // Air and small non-solid bulbs can receive light
+        // from the cells beside them.
         if (!solid)
         {
             for (const auto& offset : offsets)
             {
                 int incomingLight = getBlockLight(
-                    px + offset[0],
-                    py + offset[1],
-                    pz + offset[2]
+                    x + offset[0],
+                    y + offset[1],
+                    z + offset[2]
                 ) - 1;
 
                 if (incomingLight > bestLight)
@@ -1402,42 +1439,50 @@ void Lighting::updateBlockLight(
             }
         }
 
-        int oldLight = getBlockLight(px, py, pz);
+        int oldLight = getBlockLight(x, y, z);
 
         if (oldLight == bestLight)
         {
             continue;
         }
 
-        // emplace preserves the first value if this cell
-        // changes several times while light settles.
-        originalLight.emplace(position, oldLight);
+        // Preserve the first value even if this cell changes
+        // several times while the light settles.
+        originalBlockLight.emplace(position, oldLight);
 
-        setBlockLight(px, py, pz, bestLight);
+        setBlockLight(x, y, z, bestLight);
 
-        // A changed cell may brighten or darken its neighbors.
+        // This cell changing may affect all six neighbors.
         for (const auto& offset : offsets)
         {
             enqueue(
-                px + offset[0],
-                py + offset[1],
-                pz + offset[2]
+                x + offset[0],
+                y + offset[1],
+                z + offset[2]
             );
         }
     }
 
-    // Keep stored mesh lighting ready for both day and night.
-    for (const auto& entry : originalLight)
+    // Wait until the whole light update settles before
+    // asking the renderer to rebuild meshes.
+    if (!pendingBlockLightCells.empty())
     {
-        int px = std::get<0>(entry.first);
-        int py = std::get<1>(entry.first);
-        int pz = std::get<2>(entry.first);
+        return dirtyChunks;
+    }
 
-        if (entry.second != getBlockLight(px, py, pz))
+    for (const auto& entry : originalBlockLight)
+    {
+        int x = std::get<0>(entry.first);
+        int y = std::get<1>(entry.first);
+        int z = std::get<2>(entry.first);
+
+        if (entry.second != getBlockLight(x, y, z))
         {
-            addDirtyChunkForCell(
-                dirtyChunks, px, py, pz
-            );
+            addDirtyChunkForCell(dirtyChunks, x, y, z);
         }
     }
+
+    originalBlockLight.clear();
+
+    return dirtyChunks;
 }

@@ -44,6 +44,20 @@ bool Player::collidesWithWorld(
     const World& world
 ) const
 {
+    // Keep the whole player collision box inside the world.
+    float halfWidth = size.x * 0.5f;
+    float halfDepth = size.z * 0.5f;
+
+    if (
+        testPosition.x - halfWidth < -WORLD_BORDER ||
+        testPosition.x + halfWidth > WORLD_BORDER ||
+        testPosition.z - halfDepth < -WORLD_BORDER ||
+        testPosition.z + halfDepth > WORLD_BORDER
+        )
+    {
+        return true;
+    }
+
     // Find the edges of the player's collision box.
     glm::vec3 playerMin = testPosition - (size / 2.0f);
     glm::vec3 playerMax = testPosition + (size / 2.0f);
