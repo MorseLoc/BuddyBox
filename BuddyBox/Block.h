@@ -34,7 +34,8 @@ enum class BlockType
     Wood4,
     YellowFlower,
     RedFlower,
-    BlueFlower
+    BlueFlower,
+    Bulb
 };
 
 
@@ -85,6 +86,12 @@ struct Block
 // ItemType::None means the block
 // does not drop anything.
     ItemType dropItem;
+
+    // Light emitted by this block.
+//
+// 0 means this block does not create light.
+// 15 is maximum brightness.
+    int emittedLight;
 
 
     // --------------------------------------------------------

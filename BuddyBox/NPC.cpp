@@ -101,8 +101,8 @@ void NPC::configureForType()
 
 		maxHealth = 3;
 
-		// Pebble already has an inventory texture.
-		dropItem = ItemType::Pebble;
+		// Bulb already has an inventory texture.
+		dropItem = ItemType::Bulb;
 
 		break;
 	}

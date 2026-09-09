@@ -207,6 +207,7 @@ void ChunkMesh::build(
                         x,
                         y,
                         z,
+                        block.size,
                         1,
                         block.textureRow,
                         skyLight,
@@ -252,6 +253,7 @@ void ChunkMesh::build(
                         x,
                         y,
                         z,
+                        block.size,
                         2,
                         block.textureRow,
                         skyLight,
@@ -297,6 +299,7 @@ void ChunkMesh::build(
                         x,
                         y,
                         z,
+                        block.size,
                         3,
                         block.textureRow,
                         skyLight,
@@ -342,6 +345,7 @@ void ChunkMesh::build(
                         x,
                         y,
                         z,
+                        block.size,
                         4,
                         block.textureRow,
                         skyLight,
@@ -387,6 +391,7 @@ void ChunkMesh::build(
                         x,
                         y,
                         z,
+                        block.size,
                         0,
                         block.textureRow,
                         skyLight,
@@ -432,6 +437,7 @@ void ChunkMesh::build(
                         x,
                         y,
                         z,
+                        block.size,
                         5,
                         block.textureRow,
                         skyLight,
@@ -667,6 +673,7 @@ void ChunkMesh::addFace(
     int x,
     int y,
     int z,
+	const glm::vec3& size,
     int face,
     int textureRow,
     int skyLight,
@@ -799,19 +806,17 @@ void ChunkMesh::addFace(
         // ----------------------------------------------------
 
         vertices.push_back(
-            faces[face][index] +
+            faces[face][index] * size.x +
             static_cast<float>(x)
         );
 
-
         vertices.push_back(
-            faces[face][index + 1] +
+            faces[face][index + 1] * size.y +
             static_cast<float>(y)
         );
 
-
         vertices.push_back(
-            faces[face][index + 2] +
+            faces[face][index + 2] * size.z +
             static_cast<float>(z)
         );
 

@@ -254,6 +254,9 @@ Renderer::Renderer()
         4
     );
 
+    glDisableVertexAttribArray(5);
+
+
 
     // ========================================================
     // 4. Vertex shader
@@ -268,7 +271,9 @@ Renderer::Renderer()
 
         // Chunk meshes use these.
         "layout (location = 3) in float vertexTextureRow;\n"
-        "layout (location = 4) in float vertexLight;\n"
+       
+        "layout (location = 4) in float vertexSkyLight;\n"
+        "layout (location = 5) in float vertexBlockLight;\n"
 
 
         "out vec2 texCoord;\n"
@@ -373,7 +378,7 @@ Renderer::Renderer()
 
         "    if (useVertexLight)\n"
         "    {\n"
-        "        lightLevel = vertexLight / 15.0;\n"
+        "        lightLevel = max(vertexSkyLight, vertexBlockLight) / 15.0;\n"
         "    }\n"
         "    else\n"
         "    {\n"

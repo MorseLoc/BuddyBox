@@ -298,6 +298,10 @@ bool World::loadFromFile(
         {
             blockType = BlockType::BlueFlower;
         }
+        else if (blockTypeName == "Bulb")
+        {
+            blockType = BlockType::Bulb;
+        }
         else
         {
             // Skip unknown block types.

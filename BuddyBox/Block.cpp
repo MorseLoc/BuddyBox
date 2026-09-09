@@ -60,6 +60,8 @@ Block::Block(BlockType blockType)
     dropItem =
         ItemType::None;
 
+    emittedLight = 0;
+
     // --------------------------------------------------------
     // Block-specific properties
     // --------------------------------------------------------
@@ -188,6 +190,24 @@ Block::Block(BlockType blockType)
         dropItem =
             ItemType::GrassBlock;
     }
+    else if (type == BlockType::Bulb)
+    {
+        // Temporary: uses an existing yellow-looking atlas row.
+        textureRow = 12;
+
+        // A small floating bulb instead of a full cube.
+        size = glm::vec3(0.35f);
+
+        // The player can walk through it.
+        solid = false;
+
+        durability = 0.2f;
+
+        dropItem = ItemType::Bulb;
+
+        // Maximum light level.
+        emittedLight = 15;
+        }
 }
 
 // ============================================================

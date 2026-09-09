@@ -254,6 +254,10 @@ private:
         int z
     ) const;
 
+    // Rebuild light created by emissive blocks such as Bulbs.
+    void calculateBlockLight(
+        const World& world
+    );
 
     // --------------------------------------------------------
     // Utility

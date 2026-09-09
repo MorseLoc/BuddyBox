@@ -23,7 +23,8 @@ enum class ItemType
     Pebble,
 	Wood2Block,
 	Wood3Block,
-	Wood4Block
+	Wood4Block,
+    Bulb
 };
 
 

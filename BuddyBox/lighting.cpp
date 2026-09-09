@@ -511,6 +511,89 @@ void Lighting::calculateSkyLight(const World& world)
     }
 }
 
+void Lighting::calculateBlockLight(
+    const World& world
+)
+{
+    // Remove light from any bulbs that were broken.
+    for (auto& chunkEntry : lightChunks)
+    {
+        chunkEntry.second.blockLight.fill(0);
+    }
+
+    std::queue<LightPosition> propagationQueue;
+
+    const int neighborOffsets[6][3] =
+    {
+        { 1, 0, 0 },
+        {-1, 0, 0 },
+        { 0, 1, 0 },
+        { 0,-1, 0 },
+        { 0, 0, 1 },
+        { 0, 0,-1 }
+    };
+
+    // Seed every light-emitting block.
+    for (const auto& entry : world.blocks)
+    {
+        const Block& block = entry.second;
+
+        if (block.emittedLight <= 0)
+        {
+            continue;
+        }
+
+        int x = std::get<0>(entry.first);
+        int y = std::get<1>(entry.first);
+        int z = std::get<2>(entry.first);
+
+        setBlockLight(x, y, z, block.emittedLight);
+
+        propagationQueue.push({ x, y, z });
+    }
+
+    // Spread light through air.
+    while (!propagationQueue.empty())
+    {
+        LightPosition current = propagationQueue.front();
+        propagationQueue.pop();
+
+        int currentLight = getBlockLight(
+            current.x,
+            current.y,
+            current.z
+        );
+
+        if (currentLight <= 1)
+        {
+            continue;
+        }
+
+        int nextLight = currentLight - 1;
+
+        for (const auto& offset : neighborOffsets)
+        {
+            int nx = current.x + offset[0];
+            int ny = current.y + offset[1];
+            int nz = current.z + offset[2];
+
+            if (world.isSolidAt(nx, ny, nz))
+            {
+                continue;
+            }
+
+            if (getBlockLight(nx, ny, nz) >= nextLight)
+            {
+                continue;
+            }
+
+            setBlockLight(nx, ny, nz, nextLight);
+
+            propagationQueue.push({ nx, ny, nz });
+        }
+    }
+}
+
 
 // ============================================================
 // Record meshes affected by a changed light cell
@@ -1034,6 +1117,8 @@ std::set<std::tuple<int, int, int>> Lighting::updateBlockChange(
 
     // Initialize any new lighting regions around the edit.
     extendSkyLightArea(world, x, y, z, dirtyChunks);
+
+    calculateBlockLight(world);
 
     return dirtyChunks;
 }

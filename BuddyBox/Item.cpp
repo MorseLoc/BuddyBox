@@ -103,6 +103,16 @@ Item::Item(
         placedBlockType =
             BlockType::Wood4;
     }
+    else if (type == ItemType::Bulb)
+    {
+        // Temporary: uses the Pebble icon.
+        // We can give the Bulb its own Itemdex art later.
+        textureRow = 4;
+
+        feature = ItemFeature::PlaceBlock;
+
+        placedBlockType = BlockType::Bulb;
+    }
 
 
     // --------------------------------------------------------

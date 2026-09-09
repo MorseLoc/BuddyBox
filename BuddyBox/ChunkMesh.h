@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <glm/glm.hpp>
 
 
 struct World;
@@ -69,6 +70,7 @@ private:
         int x,
         int y,
         int z,
+        const glm::vec3& size,
         int face,
         int textureRow,
         int skyLight,
