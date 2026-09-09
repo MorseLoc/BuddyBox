@@ -91,34 +91,33 @@ bool Skybox::initialize(const char* imagePath)
         uniform sampler2D skyImage;
         uniform bool hasImage;
 
+        uniform vec3 sunDirection;
+        uniform float daylight;
+
         const float PI = 3.14159265359;
 
         void main()
         {
             vec3 direction = normalize(skyDirection);
 
-            if (hasImage)
-            {
-                // Map a 360-degree panorama around the camera.
-                float u =
-                    atan(direction.z, direction.x) / (2.0 * PI)
-                    + 0.5;
+            // Keep the original daytime colors.
+            vec3 horizon = mix(
+                vec3(0.04, 0.05, 0.09),
+                vec3(0.72, 0.86, 1.0),
+                daylight
+            );
 
-                float v =
-                    acos(clamp(direction.y, -1.0, 1.0)) / PI;
+            vec3 overhead = mix(
+                vec3(0.006, 0.012, 0.035),
+                vec3(0.16, 0.43, 0.82),
+                daylight
+            );
 
-                finalColor = vec4(
-                    texture(skyImage, vec2(u, v)).rgb,
-                    1.0
-                );
-
-                return;
-            }
-
-            // Default sky colors.
-            vec3 horizon = vec3(0.72, 0.86, 1.0);
-            vec3 overhead = vec3(0.16, 0.43, 0.82);
-            vec3 below = vec3(0.35, 0.44, 0.55);
+            vec3 below = mix(
+                vec3(0.012, 0.016, 0.025),
+                vec3(0.35, 0.44, 0.55),
+                daylight
+            );
 
             vec3 color;
 
@@ -139,8 +138,24 @@ bool Skybox::initialize(const char* imagePath)
                 );
             }
 
-            // A small sun fixed in the sky.
-            vec3 sunDirection = normalize(vec3(0.4, 0.65, -0.6));
+            // Optional panorama also darkens at night.
+            if (hasImage)
+            {
+                float u =
+                    atan(direction.z, direction.x) / (2.0 * PI)
+                    + 0.5;
+
+                float v =
+                    acos(clamp(direction.y, -1.0, 1.0)) / PI;
+
+                vec3 nightTint = vec3(0.04, 0.06, 0.12);
+
+                color = texture(skyImage, vec2(u, v)).rgb
+                    * mix(nightTint, vec3(1.0), daylight);
+            }
+
+            // The moon sits opposite the sun.
+            vec3 moonDirection = -sunDirection;
 
             float sun = smoothstep(
                 0.9992,
@@ -148,7 +163,27 @@ bool Skybox::initialize(const char* imagePath)
                 dot(direction, sunDirection)
             );
 
-            color = mix(color, vec3(1.0, 0.96, 0.78), sun);
+            float moon = smoothstep(
+                0.9992,
+                0.9996,
+                dot(direction, moonDirection)
+            );
+
+            // Hide both discs below the horizon.
+            float aboveHorizon =
+                smoothstep(0.0, 0.015, direction.y);
+
+            color = mix(
+                color,
+                vec3(1.0, 0.96, 0.78),
+                sun * aboveHorizon
+            );
+
+            color = mix(
+                color,
+                vec3(0.78, 0.85, 1.0),
+                moon * aboveHorizon
+            );
 
             finalColor = vec4(color, 1.0);
         }
@@ -203,6 +238,9 @@ bool Skybox::initialize(const char* imagePath)
         program, "skyProjection"
     );
     imageLocation = glGetUniformLocation(program, "hasImage");
+
+    sunLocation = glGetUniformLocation(program, "sunDirection");
+    daylightLocation = glGetUniformLocation(program, "daylight");
 
     glUseProgram(program);
     glUniform1i(glGetUniformLocation(program, "skyImage"), 0);
@@ -272,7 +310,9 @@ bool Skybox::initialize(const char* imagePath)
 
 void Skybox::draw(
     const glm::mat4& view,
-    const glm::mat4& projection
+    const glm::mat4& projection,
+    const glm::vec3& sunDirection,
+    float daylight
 ) const
 {
     if (!program)
@@ -291,6 +331,12 @@ void Skybox::draw(
     glDepthFunc(GL_LEQUAL);
 
     glUseProgram(program);
+
+    glUniform3fv(
+        sunLocation, 1, glm::value_ptr(sunDirection)
+    );
+
+    glUniform1f(daylightLocation, daylight);
 
     glUniformMatrix4fv(
         viewLocation, 1, GL_FALSE, glm::value_ptr(rotationOnly)

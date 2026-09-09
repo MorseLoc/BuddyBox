@@ -11,7 +11,9 @@ public:
 
     void draw(
         const glm::mat4& view,
-        const glm::mat4& projection
+        const glm::mat4& projection,
+        const glm::vec3& sunDirection,
+        float daylight
     ) const;
 
     // Call before destroying the OpenGL window.
@@ -25,4 +27,7 @@ private:
     GLint viewLocation = -1;
     GLint projectionLocation = -1;
     GLint imageLocation = -1;
+
+    GLint sunLocation = -1;
+    GLint daylightLocation = -1;
 };

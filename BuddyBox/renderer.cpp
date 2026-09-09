@@ -299,6 +299,8 @@ Renderer::Renderer()
         // true  = use ChunkMesh light attribute
         "uniform bool useVertexLight;\n"
 
+        "uniform float sunlightStrength;\n"
+
         // true when using the one-column Itemdex texture.
         "uniform bool useItemAtlas;\n"
 
@@ -378,7 +380,8 @@ Renderer::Renderer()
 
         "    if (useVertexLight)\n"
         "    {\n"
-        "        lightLevel = max(vertexSkyLight, vertexBlockLight) / 15.0;\n"
+            "        float sky = vertexSkyLight * sunlightStrength;\n"
+            "        lightLevel = max(sky, vertexBlockLight) / 15.0;\n"
         "    }\n"
         "    else\n"
         "    {\n"

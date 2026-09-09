@@ -1426,22 +1426,14 @@ void Lighting::updateBlockLight(
         }
     }
 
-    // Refresh meshes only when their final visible light changed.
+    // Keep stored mesh lighting ready for both day and night.
     for (const auto& entry : originalLight)
     {
         int px = std::get<0>(entry.first);
         int py = std::get<1>(entry.first);
         int pz = std::get<2>(entry.first);
 
-        int sky = getSkyLight(px, py, pz);
-
-        int oldBrightness = std::max(sky, entry.second);
-        int newBrightness = std::max(
-            sky,
-            getBlockLight(px, py, pz)
-        );
-
-        if (oldBrightness != newBrightness)
+        if (entry.second != getBlockLight(px, py, pz))
         {
             addDirtyChunkForCell(
                 dirtyChunks, px, py, pz

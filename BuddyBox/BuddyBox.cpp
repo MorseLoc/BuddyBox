@@ -375,6 +375,22 @@ int main()
     // 9. Main game loop
     // ========================================================
 
+        // Ten minutes of day, followed by ten minutes of night.
+    const double HALF_CYCLE_SECONDS = 600.0;
+
+    // Each sunrise/sunset transition lasts thirty seconds.
+    const double TRANSITION_SECONDS = 30.0;
+
+    const double TWO_PI = 6.283185307179586;
+
+    // Start in the morning with the sun already above the horizon.
+    const double START_TIME = HALF_CYCLE_SECONDS * 0.25;
+
+    const double cycleStartedAt = glfwGetTime();
+
+    const GLint sunlightLocation =
+        glGetUniformLocation(shaderProgram, "sunlightStrength");
+
     while (!glfwWindowShouldClose(window))
     {
         // Read new events before checking input.
@@ -1015,13 +1031,60 @@ int main()
             GL_DEPTH_BUFFER_BIT
         );
 
-        skybox.draw(view, projection);
+        // Use real elapsed time so slow frames don't slow the sun.
+        double fullCycle = HALF_CYCLE_SECONDS * 2.0;
+
+        double cycleTime = std::fmod(
+            glfwGetTime() - cycleStartedAt + START_TIME,
+            fullCycle
+        );
+
+        double angle = TWO_PI * cycleTime / fullCycle;
+
+        float sunHeight = static_cast<float>(std::sin(angle));
+        float horizontal = static_cast<float>(std::cos(angle));
+
+        // A fixed path across the sky.
+        glm::vec3 sunDirection(
+            horizontal * 0.5547002f,
+            sunHeight,
+            horizontal * -0.8320503f
+        );
+
+        // Transition spans 15 seconds on either side of
+        // each horizon crossing: 30 seconds altogether.
+        float transitionHeight = static_cast<float>(
+            std::sin(
+                TWO_PI * (TRANSITION_SECONDS * 0.5) / fullCycle
+            )
+            );
+
+        float daylight = glm::clamp(
+            (sunHeight + transitionHeight) /
+            (2.0f * transitionHeight),
+            0.0f,
+            1.0f
+        );
+
+        // Smooth the start and end of the transition.
+        daylight = daylight * daylight * (3.0f - 2.0f * daylight);
+
+        // Small amount of moonlight at night.
+        float sunlightStrength = 0.06f + daylight * 0.94f;
+
+        skybox.draw(
+            view,
+            projection,
+            sunDirection,
+            daylight
+        );
 
         // ----------------------------------------------------
         // Prepare world rendering
         // ----------------------------------------------------
 
         glUseProgram(shaderProgram);
+        glUniform1f(sunlightLocation, sunlightStrength);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, blockAtlasTexture);
