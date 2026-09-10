@@ -133,8 +133,8 @@ void HandAnimator::load(TextureManager& textures)
     const int BREAK_FRAME_COUNT = 20;     // BLANK
     const int PLACE_FRAME_COUNT = 20;     // BLANK
     const int ATTACK_FRAME_COUNT = 20;    // BLANK
-    const int SECRET_01_FRAME_COUNT = 0; // BLANK
-    const int SECRET_02_FRAME_COUNT = 0; // BLANK
+    const int SECRET_01_FRAME_COUNT = 54; // BLANK
+    const int SECRET_02_FRAME_COUNT = 96; // BLANK
 
     // Match these rates to the PNG export rate later.
     loadClip(textures, Animation::Idle,
@@ -144,7 +144,7 @@ void HandAnimator::load(TextureManager& textures)
         "hold", HOLD_FRAME_COUNT, 24.0f);
 
     loadClip(textures, Animation::Breaking,
-        "attack", BREAK_FRAME_COUNT, 48.0f);
+        "break", BREAK_FRAME_COUNT, 12.0f);
 
     loadClip(textures, Animation::Placing,
         "place", PLACE_FRAME_COUNT, 36.0f);
@@ -153,7 +153,6 @@ void HandAnimator::load(TextureManager& textures)
         "attack", ATTACK_FRAME_COUNT, 48.0f);
 
 
-	//NOT IMPLEMENTED YET
     loadClip(textures, Animation::Secret01,
         "secret_01", SECRET_01_FRAME_COUNT, 24.0f);
 

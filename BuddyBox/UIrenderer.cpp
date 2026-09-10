@@ -653,8 +653,8 @@ void UIRenderer::drawHand(
 
             glUniform2f(
                 position,
-                centerX - halfWidth * 0.20f,
-                centerY + halfHeight * 0.35f
+                centerX - halfWidth * 0.00f,
+                centerY + halfHeight * 0.25f
             );
 
             glUniform2f(

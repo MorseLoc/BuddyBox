@@ -440,6 +440,8 @@ int main()
 
     bool isBreakingBlock = false;
 
+    float handBreakingGraceTimer = 0.0f;
+
     // ========================================================
     // 9. Main game loop
     // ========================================================
@@ -1385,10 +1387,34 @@ int main()
             handItem = ItemType::None;
         }
 
+        // Hide/reset the grace period when another action takes over.
+        if (!focused || inventoryOpen || handAttacked || handPlaced)
+        {
+            handBreakingGraceTimer = 0.0f;
+        }
+        else if (isBreakingBlock)
+        {
+            // Refresh while actively mining.
+            handBreakingGraceTimer = 0.18f;
+        }
+        else
+        {
+            // Briefly keep the breaking animation between blocks.
+            handBreakingGraceTimer -= deltaTime;
+
+            if (handBreakingGraceTimer < 0.0f)
+            {
+                handBreakingGraceTimer = 0.0f;
+            }
+        }
+
+        const bool animateBreaking =
+            isBreakingBlock || handBreakingGraceTimer > 0.0f;
+
         handAnimator.update(
             deltaTime,
             handItem,
-            isBreakingBlock,
+            animateBreaking,
             handAttacked,
             handPlaced,
             handActive,
