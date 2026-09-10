@@ -322,6 +322,24 @@ bool Inventory::removeSelectedItem()
     return true;
 }
 
+std::vector<InventorySlot> Inventory::takeAll()
+{
+    cancelDrag();
+
+    std::vector<InventorySlot> removed;
+
+    for (InventorySlot& slot : slots)
+    {
+        if (slot.item != ItemType::None && slot.amount > 0)
+        {
+            removed.push_back(slot);
+        }
+
+        slot = InventorySlot{};
+    }
+
+    return removed;
+}
 
 // ============================================================
 // Inventory information

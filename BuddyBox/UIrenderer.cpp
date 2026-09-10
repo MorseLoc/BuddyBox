@@ -150,10 +150,17 @@ bool UIRenderer::initialize()
                     vec2(numberU, 1.0 - uv.y)
                 );
             }
-            else if (drawMode == 4)
-            {
-                finalColor = texture(uiTexture, uv);
-            }
+           else if (drawMode == 4)
+{
+    finalColor = texture(uiTexture, uv);
+}
+else if (drawMode == 5)
+{
+    float atlasV =
+        (textureRow + (1.0 - uv.y)) / atlasRows;
+
+    finalColor = texture(uiTexture, vec2(uv.x, atlasV));
+}
         }
     )";
 
@@ -567,6 +574,72 @@ void UIRenderer::drawCrosshair()
     // Horizontal bar.
     glUniform2f(scaleLocation, 0.025f, 0.010f);
     glUniform2f(positionLocation, 0.0f, 0.0f);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+void UIRenderer::drawHealth(
+    unsigned int healthTexture,
+    int health,
+    int maximumHealth
+)
+{
+    if (healthTexture == 0 || maximumHealth <= 0)
+    {
+        return;
+    }
+
+    glUseProgram(shaderProgram);
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(VAO);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, healthTexture);
+
+    const int mode =
+        glGetUniformLocation(shaderProgram, "drawMode");
+
+    const int texture =
+        glGetUniformLocation(shaderProgram, "uiTexture");
+
+    const int scale =
+        glGetUniformLocation(shaderProgram, "uiScale");
+
+    const int position =
+        glGetUniformLocation(shaderProgram, "uiPosition");
+
+    const int row =
+        glGetUniformLocation(shaderProgram, "textureRow");
+
+    const int rows =
+        glGetUniformLocation(shaderProgram, "atlasRows");
+
+    const int clampedHealth =
+        health < 0
+        ? 0
+        : (health > maximumHealth ? maximumHealth : health);
+
+    // Full health is top row 0. Empty is bottom row 5.
+    const int textureRow = maximumHealth - clampedHealth;
+
+    glUniform1i(texture, 0);
+    glUniform1i(mode, 5);
+
+    glUniform1f(
+        rows,
+        static_cast<float>(maximumHealth + 1)
+    );
+
+    glUniform1f(
+        row,
+        static_cast<float>(textureRow)
+    );
+
+    // Your sheet is 25x5 per row: five times wider than tall.
+    glUniform2f(scale, 0.20f, 0.04f);
+    glUniform2f(position, -0.78f, 0.90f);
+
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glEnable(GL_DEPTH_TEST);

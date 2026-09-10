@@ -355,6 +355,9 @@ int main()
     unsigned int npcAtlasTexture =
         textureManager.loadTexture("textures/NPCdex.png");
 
+    unsigned int healthTexture =
+        textureManager.loadTexture("textures/Health.png");
+
     unsigned int shaderProgram = renderer.getShaderProgram();
 
     HandAnimator handAnimator;
@@ -577,6 +580,28 @@ int main()
 
         camera.updatePosition(player.position);
 
+        if (player.isDead())
+        {
+            const glm::vec3 deathPosition = player.position;
+
+            const std::vector<InventorySlot> lostStacks =
+                inventory.takeAll();
+
+            for (const InventorySlot& stack : lostStacks)
+            {
+                droppedItems.emplace_back(
+                    stack.item,
+                    deathPosition,
+                    stack.amount
+                );
+            }
+
+            player.respawn();
+            camera.updatePosition(player.position);
+            camera.ignoreNextMouseMove();
+        }
+
+
         // ----------------------------------------------------
         // Active blocks
         // ----------------------------------------------------
@@ -677,7 +702,8 @@ int main()
             if (distanceToPlayer < 2.0f)
             {
                 bool itemWasAdded = inventory.addItem(
-                    droppedItems[i].type
+                    droppedItems[i].type,
+                    droppedItems[i].amount
                 );
 
                 if (itemWasAdded)
@@ -1429,6 +1455,12 @@ int main()
             handItemAtlasRows,
             windowWidth,
             windowHeight
+        );
+
+        uiRenderer.drawHealth(
+            healthTexture,
+            player.health,
+            Player::MAX_HEALTH
         );
 
         // ----------------------------------------------------

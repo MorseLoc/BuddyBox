@@ -13,12 +13,14 @@
 
 Player::Player()
 {
-    // Starting position.
-    position = glm::vec3(
+
+    spawnPosition = glm::vec3(
         0.0f,
         1.4f,
         3.0f
     );
+
+    position = spawnPosition;
 
     // Collision box: width, height, depth.
     size = glm::vec3(
@@ -32,8 +34,60 @@ Player::Player()
 
     verticalVelocity = 0.0f;
     grounded = false;
+
+    health = MAX_HEALTH;
+    highestAirborneY = position.y;
 }
 
+// ============================================================
+// Health and respawning
+// ============================================================
+
+bool Player::takeDamage(int amount)
+{
+    if (amount <= 0 || health <= 0)
+    {
+        return health <= 0;
+    }
+
+    health -= amount;
+
+    if (health < 0)
+    {
+        health = 0;
+    }
+
+    return health == 0;
+}
+
+void Player::heal(int amount)
+{
+    if (amount <= 0 || health >= MAX_HEALTH)
+    {
+        return;
+    }
+
+    health += amount;
+
+    if (health > MAX_HEALTH)
+    {
+        health = MAX_HEALTH;
+    }
+}
+
+bool Player::isDead() const
+{
+    return health <= 0;
+}
+
+void Player::respawn()
+{
+    position = spawnPosition;
+    verticalVelocity = 0.0f;
+    grounded = false;
+    highestAirborneY = position.y;
+    health = MAX_HEALTH;
+}
 
 // ============================================================
 // Check collision at a proposed position
@@ -119,6 +173,14 @@ void Player::move(
     bool acceptInput
 )
 {
+
+    const bool wasGrounded = grounded;
+
+    if (wasGrounded)
+    {
+        highestAirborneY = position.y;
+    }
+
     // --------------------------------------------------------
     // Walking directions
     // --------------------------------------------------------
@@ -273,6 +335,31 @@ void Player::move(
 
     // A downward collision means the player landed.
     grounded = hitVertical && verticalVelocity < 0.0f;
+
+    // More than five blocks of falling causes one damage.
+// Each additional five blocks causes another damage point.
+    if (grounded)
+    {
+        if (!wasGrounded)
+        {
+            const float fallDistance = highestAirborneY - position.y;
+
+            if (fallDistance > 5.0f)
+            {
+                const int fallDamage = static_cast<int>(
+                    std::ceil((fallDistance - 5.0f) / 5.0f)
+                    );
+
+                takeDamage(fallDamage);
+            }
+        }
+
+        highestAirborneY = position.y;
+    }
+    else if (position.y > highestAirborneY)
+    {
+        highestAirborneY = position.y;
+    }
 
     // Stop falling or rising after hitting a surface.
     if (hitVertical)

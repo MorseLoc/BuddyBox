@@ -34,16 +34,20 @@ struct DroppedItem
     // Positive = moving upward.
     float verticalVelocity;
 
+    int amount;
+
 
     // Creates a dropped item at a world position.
     DroppedItem(
         ItemType itemType,
-        const glm::vec3& startPosition
+        const glm::vec3& startPosition,
+        int itemAmount = 1
     )
         :
         type(itemType),
         position(startPosition),
-        verticalVelocity(0.0f)
+        verticalVelocity(0.0f),
+        amount(itemAmount)
     {
     }
 };

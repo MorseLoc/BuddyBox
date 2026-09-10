@@ -100,6 +100,9 @@ public:
     // Returns false if that slot is empty.
     bool removeSelectedItem();
 
+    // Removes and returns every inventory stack. Used on death.
+    std::vector<InventorySlot> takeAll();
+
 
     // --------------------------------------------------------
     // Inventory information

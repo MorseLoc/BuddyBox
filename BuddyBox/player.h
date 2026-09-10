@@ -29,6 +29,14 @@ struct Player
     // Player cannot move past these X/Z world coordinates.
     static constexpr float WORLD_BORDER = 56.0f;
 
+    static constexpr int MAX_HEALTH = 5;
+
+    // Future enemies, hazards, and healing will use these.
+    int health;
+
+    // Position used whenever the player respawns.
+    glm::vec3 spawnPosition;
+
 
     // --------------------------------------------------------
     // Movement properties
@@ -47,12 +55,20 @@ struct Player
     // True when standing on solid ground.
     bool grounded;
 
+    // Highest point reached during the current time in the air.
+    float highestAirborneY;
+
 
     // --------------------------------------------------------
     // Constructor
     // --------------------------------------------------------
 
     Player();
+
+    bool takeDamage(int amount);
+    void heal(int amount);
+    bool isDead() const;
+    void respawn();
 
 
     // --------------------------------------------------------

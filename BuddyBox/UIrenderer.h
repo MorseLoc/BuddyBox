@@ -45,6 +45,12 @@ public:
         int framebufferHeight
     );
 
+    void drawHealth(
+        unsigned int healthTexture,
+        int health,
+        int maximumHealth
+    );
+
 private:
     unsigned int VAO;
     unsigned int VBO;
