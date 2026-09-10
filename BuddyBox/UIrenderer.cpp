@@ -571,3 +571,101 @@ void UIRenderer::drawCrosshair()
 
     glEnable(GL_DEPTH_TEST);
 }
+
+void UIRenderer::drawHand(
+    unsigned int handTexture,
+    unsigned int itemAtlasTexture,
+    ItemType heldItem,
+    int itemAtlasRows,
+    int framebufferWidth,
+    int framebufferHeight
+)
+{
+    if (
+        handTexture == 0 ||
+        framebufferWidth <= 0 ||
+        framebufferHeight <= 0
+        )
+    {
+        return;
+    }
+
+    glUseProgram(shaderProgram);
+    glDisable(GL_DEPTH_TEST);
+    glBindVertexArray(VAO);
+    glActiveTexture(GL_TEXTURE0);
+
+    glUniform1i(
+        glGetUniformLocation(shaderProgram, "uiTexture"),
+        0
+    );
+
+    int mode = glGetUniformLocation(shaderProgram, "drawMode");
+    int scale = glGetUniformLocation(shaderProgram, "uiScale");
+    int position = glGetUniformLocation(shaderProgram, "uiPosition");
+    int row = glGetUniformLocation(shaderProgram, "textureRow");
+    int rows = glGetUniformLocation(shaderProgram, "atlasRows");
+
+    float halfHeight = 0.45f;
+
+    float halfWidth =
+        halfHeight *
+        static_cast<float>(framebufferHeight) /
+        static_cast<float>(framebufferWidth);
+
+    float centerX = 1.0f - halfWidth;
+    float centerY = -1.0f + halfHeight;
+
+    glUniform1i(mode, 1);
+    glUniform1f(row, 0.0f);
+    glUniform1f(rows, 1.0f);
+
+    glBindTexture(GL_TEXTURE_2D, handTexture);
+    glUniform2f(scale, halfWidth, halfHeight);
+    glUniform2f(position, centerX, centerY);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    if (
+        heldItem != ItemType::None &&
+        itemAtlasTexture != 0 &&
+        itemAtlasRows > 0
+        )
+    {
+        Item item(heldItem);
+
+        if (
+            item.textureRow >= 0 &&
+            item.textureRow < itemAtlasRows
+            )
+        {
+            glBindTexture(GL_TEXTURE_2D, itemAtlasTexture);
+
+            glUniform1f(
+                row,
+                static_cast<float>(item.textureRow)
+            );
+
+            glUniform1f(
+                rows,
+                static_cast<float>(itemAtlasRows)
+            );
+
+            glUniform2f(
+                position,
+                centerX - halfWidth * 0.20f,
+                centerY + halfHeight * 0.35f
+            );
+
+            glUniform2f(
+                scale,
+                halfWidth * 0.22f,
+                halfHeight * 0.22f
+            );
+
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+    }
+
+    glEnable(GL_DEPTH_TEST);
+}

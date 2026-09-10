@@ -33,6 +33,7 @@
 #include "DroppedItem.h"
 #include "lighting.h"
 #include "Skybox.h"
+#include "HandAnimator.h"
 
 
 // ============================================================
@@ -356,6 +357,35 @@ int main()
 
     unsigned int shaderProgram = renderer.getShaderProgram();
 
+    HandAnimator handAnimator;
+    handAnimator.load(textureManager);
+
+    // Read the actual number of square rows in Itemdex.
+    int handItemAtlasRows = 0;
+
+    if (itemAtlasTexture != 0)
+    {
+        glBindTexture(GL_TEXTURE_2D, itemAtlasTexture);
+
+        int atlasWidth = 0;
+        int atlasHeight = 0;
+
+        glGetTexLevelParameteriv(
+            GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &atlasWidth
+        );
+
+        glGetTexLevelParameteriv(
+            GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &atlasHeight
+        );
+
+        if (atlasWidth > 0)
+        {
+            handItemAtlasRows = atlasHeight / atlasWidth;
+        }
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
     // --------------------------------------------------------
     // 7. Load inventory and world
     // --------------------------------------------------------
@@ -430,10 +460,19 @@ int main()
     const GLint sunlightLocation =
         glGetUniformLocation(shaderProgram, "sunlightStrength");
 
+    glm::vec3 previousHandPosition = player.position;
+    glm::vec3 previousHandDirection = camera.getFront();
+
+    int previousHandSlot = inventory.getSelectedSlot();
+
     while (!glfwWindowShouldClose(window))
     {
         // Read new events before checking input.
         glfwPollEvents();
+
+        // These reset every frame.
+        bool handAttacked = false;
+        bool handPlaced = false;
 
         const bool focused =
             glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE;
@@ -774,6 +813,7 @@ int main()
             );
 
             hitNPC.takeDamage(1);
+            handAttacked = true;
 
             blockBreakTimer = 0.0f;
             blockBreakProgress = 0.0f;
@@ -1014,6 +1054,7 @@ int main()
                             );
 
                         inventory.removeSelectedItem();
+                        handPlaced = true;
 
                         rebuildChangedChunks(
                             previousX,
@@ -1313,6 +1354,57 @@ int main()
             );
         }
 
+        // Movement, looking, or input counts as activity.
+        bool handActive =
+            glm::length(player.position - previousHandPosition)
+                > 0.0001f ||
+            glm::length(camera.getFront() - previousHandDirection)
+                > 0.0001f ||
+            inventory.getSelectedSlot() != previousHandSlot ||
+            leftMousePressed ||
+            rightMousePressed ||
+            scrollAmount != 0.0 ||
+            glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+
+        previousHandPosition = player.position;
+        previousHandDirection = camera.getFront();
+        previousHandSlot = inventory.getSelectedSlot();
+
+        ItemType handItem = inventory.getSelectedItemType();
+
+        if (
+            inventory.getAmountAtSlot(
+                inventory.getSelectedSlot()
+            ) <= 0
+            )
+        {
+            handItem = ItemType::None;
+        }
+
+        handAnimator.update(
+            deltaTime,
+            handItem,
+            isBreakingBlock,
+            handAttacked,
+            handPlaced,
+            handActive,
+            focused && !inventoryOpen
+        );
+
+        // Draw before the hotbar so inventory UI stays on top.
+        uiRenderer.drawHand(
+            handAnimator.getTexture(),
+            itemAtlasTexture,
+            handAnimator.getDisplayedItem(),
+            handItemAtlasRows,
+            windowWidth,
+            windowHeight
+        );
+
         // ----------------------------------------------------
         // Draw inventory or hotbar
         // ----------------------------------------------------
@@ -1373,6 +1465,8 @@ int main()
     chunkMeshes.clear();
 
     skybox.cleanup();
+
+    handAnimator.cleanup();
 
     glfwDestroyWindow(window);
     glfwTerminate();

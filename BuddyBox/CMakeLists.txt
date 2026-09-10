@@ -42,6 +42,8 @@ add_executable(BuddyBox
     "InventoryLayout.h"
     "Skybox.h"
     "Skybox.cpp"
+    "HandAnimator.h"
+    "HandAnimator.cpp"
 )
 
 configure_file(
@@ -92,6 +94,12 @@ configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/textures/Inventory.png"
     "${CMAKE_CURRENT_BINARY_DIR}/textures/Inventory.png"
     COPYONLY
+)
+
+add_custom_command(TARGET BuddyBox POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/textures/hand"
+        "${CMAKE_CURRENT_BINARY_DIR}/textures/hand"
 )
 
 target_link_libraries(BuddyBox PRIVATE glfw glad::glad glm::glm OpenGL::GL)
