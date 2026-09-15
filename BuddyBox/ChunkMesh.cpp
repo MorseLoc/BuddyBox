@@ -139,6 +139,27 @@ void ChunkMesh::build(
                 const Block& block =
                     blockIterator->second;
 
+                // Saplings and future plants use two intersecting
+// transparent planes instead of cube faces.
+                if (block.crossedSprite)
+                {
+                    addCrossedSprite(
+                        vertices,
+                        x,
+                        y,
+                        z,
+                        block.size,
+                        block.textureRow,
+                        lighting.getSkyLight(x, y, z),
+                        std::max(
+                            lighting.getBlockLight(x, y, z),
+                            block.emittedLight
+                        )
+                    );
+
+                    continue;
+                }
+
                 // Decide whether the neighboring block hides this face.
                 auto shouldDrawFace = [&](int nx, int ny, int nz)
                     {
@@ -896,5 +917,90 @@ void ChunkMesh::addFace(
                 blockLight
                 )
         );
+    }
+}
+
+
+
+// ============================================================
+// Add two intersecting plant planes
+// ============================================================
+
+void ChunkMesh::addCrossedSprite(
+    std::vector<float>& vertices,
+    int x,
+    int y,
+    int z,
+    const glm::vec3& size,
+    int textureRow,
+    int skyLight,
+    int blockLight
+)
+{
+    const float halfWidth = size.x * 0.5f;
+    const float halfHeight = size.y * 0.5f;
+
+    // Each plane has two triangles.
+    // Together they form an X when viewed from above.
+    const float planes[2][6][5] =
+    {
+        {
+            {-halfWidth, -halfHeight, -halfWidth, 0.0f, 0.0f},
+            { halfWidth, -halfHeight,  halfWidth, 1.0f, 0.0f},
+            { halfWidth,  halfHeight,  halfWidth, 1.0f, 1.0f},
+
+            { halfWidth,  halfHeight,  halfWidth, 1.0f, 1.0f},
+            {-halfWidth,  halfHeight, -halfWidth, 0.0f, 1.0f},
+            {-halfWidth, -halfHeight, -halfWidth, 0.0f, 0.0f}
+        },
+        {
+            {-halfWidth, -halfHeight,  halfWidth, 0.0f, 0.0f},
+            { halfWidth, -halfHeight, -halfWidth, 1.0f, 0.0f},
+            { halfWidth,  halfHeight, -halfWidth, 1.0f, 1.0f},
+
+            { halfWidth,  halfHeight, -halfWidth, 1.0f, 1.0f},
+            {-halfWidth,  halfHeight,  halfWidth, 0.0f, 1.0f},
+            {-halfWidth, -halfHeight,  halfWidth, 0.0f, 0.0f}
+        }
+    };
+
+    for (const auto& plane : planes)
+    {
+        for (const auto& vertex : plane)
+        {
+            // Position
+            vertices.push_back(
+                static_cast<float>(x) + vertex[0]
+            );
+
+            vertices.push_back(
+                static_cast<float>(y) + vertex[1]
+            );
+
+            vertices.push_back(
+                static_cast<float>(z) + vertex[2]
+            );
+
+            // Texture coordinates
+            vertices.push_back(vertex[3]);
+            vertices.push_back(vertex[4]);
+
+            // Use front-face texture tile from the block atlas.
+            vertices.push_back(1.0f);
+
+            // Texture row
+            vertices.push_back(
+                static_cast<float>(textureRow)
+            );
+
+            // Lighting
+            vertices.push_back(
+                static_cast<float>(skyLight)
+            );
+
+            vertices.push_back(
+                static_cast<float>(blockLight)
+            );
+        }
     }
 }

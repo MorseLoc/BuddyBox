@@ -76,4 +76,16 @@ private:
         int skyLight,
         int blockLight
     );
+
+    // Draws two intersecting vertical planes for plants.
+    void addCrossedSprite(
+        std::vector<float>& vertices,
+        int x,
+        int y,
+        int z,
+        const glm::vec3& size,
+        int textureRow,
+        int skyLight,
+        int blockLight
+    );
 };

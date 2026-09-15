@@ -5,11 +5,6 @@
 
 // ============================================================
 // Item types
-//
-// Every thing that can exist in the player's inventory
-// gets an ItemType.
-//
-// None means "no item".
 // ============================================================
 
 enum class ItemType
@@ -21,23 +16,16 @@ enum class ItemType
     WoodBlock,
     Stick,
     Pebble,
-	Wood2Block,
-	Wood3Block,
-	Wood4Block,
-    Bulb
+    Wood2Block,
+    Wood3Block,
+    Wood4Block,
+    Bulb,
+    Sapling
 };
 
 
 // ============================================================
 // Item features
-//
-// Describes what an item can currently do.
-//
-// We can add more later:
-// - Tool
-// - Food
-// - Weapon
-// - Structure
 // ============================================================
 
 enum class ItemFeature
@@ -50,32 +38,22 @@ enum class ItemFeature
 
 // ============================================================
 // Item
-//
-// Stores the permanent properties of one item type.
 // ============================================================
 
 struct Item
 {
-    // What item this is.
+    // What kind of item this is.
     ItemType type;
 
-
-    // What kind of behavior this item has.
+    // What the item can do.
     ItemFeature feature;
 
-
-    // Which row of Itemdex.png this item uses.
+    // Row in Itemdex.png.
     int textureRow;
 
-
-    // The block this item places.
-    //
-    // Only used when feature == PlaceBlock.
+    // Block placed when this is a placeable item.
     BlockType placedBlockType;
 
-
-    // Creates an item and gives it the
-    // correct properties for its ItemType.
     Item(
         ItemType itemType
     );

@@ -3,135 +3,84 @@
 
 // ============================================================
 // Item constructor
-//
-// Gives each ItemType its permanent properties.
 // ============================================================
 
 Item::Item(
     ItemType itemType
 )
 {
-    type =
-        itemType;
+    type = itemType;
 
+    feature = ItemFeature::None;
 
-    // --------------------------------------------------------
-    // Default item properties
-    // --------------------------------------------------------
+    textureRow = -1;
 
-    feature =
-        ItemFeature::None;
-
-
-    textureRow =
-        -1;
-
-
-    // This value does not matter unless the item
-    // actually has PlaceBlock behavior.
-    placedBlockType =
-        BlockType::Grass;
-
+    placedBlockType = BlockType::Grass;
 
     // --------------------------------------------------------
-    // Block items
+    // Placeable block items
     // --------------------------------------------------------
 
     if (type == ItemType::GrassBlock)
     {
-        textureRow =
-            0;
-
-        feature =
-            ItemFeature::PlaceBlock;
-
-        placedBlockType =
-            BlockType::Grass;
+        textureRow = 0;
+        feature = ItemFeature::PlaceBlock;
+        placedBlockType = BlockType::Grass;
     }
     else if (type == ItemType::DirtBlock)
     {
-        textureRow =
-            1;
-
-        feature =
-            ItemFeature::PlaceBlock;
-
-        placedBlockType =
-            BlockType::Dirt;
+        textureRow = 1;
+        feature = ItemFeature::PlaceBlock;
+        placedBlockType = BlockType::Dirt;
     }
     else if (type == ItemType::WoodBlock)
     {
-        textureRow =
-            2;
-
-        feature =
-            ItemFeature::PlaceBlock;
-
-        placedBlockType =
-            BlockType::Wood;
+        textureRow = 2;
+        feature = ItemFeature::PlaceBlock;
+        placedBlockType = BlockType::Wood;
     }
     else if (type == ItemType::Wood2Block)
     {
-        textureRow =
-            5;
-
-        feature =
-            ItemFeature::PlaceBlock;
-
-        placedBlockType =
-            BlockType::Wood2;
+        textureRow = 5;
+        feature = ItemFeature::PlaceBlock;
+        placedBlockType = BlockType::Wood2;
     }
     else if (type == ItemType::Wood3Block)
     {
-        textureRow =
-            6;
-
-        feature =
-            ItemFeature::PlaceBlock;
-
-        placedBlockType =
-            BlockType::Wood3;
+        textureRow = 6;
+        feature = ItemFeature::PlaceBlock;
+        placedBlockType = BlockType::Wood3;
     }
     else if (type == ItemType::Wood4Block)
     {
-        textureRow =
-            7;
-
-        feature =
-            ItemFeature::PlaceBlock;
-
-        placedBlockType =
-            BlockType::Wood4;
+        textureRow = 7;
+        feature = ItemFeature::PlaceBlock;
+        placedBlockType = BlockType::Wood4;
     }
     else if (type == ItemType::Bulb)
     {
-       
         textureRow = 8;
-
         feature = ItemFeature::PlaceBlock;
-
         placedBlockType = BlockType::Bulb;
     }
-
+    else if (type == ItemType::Sapling)
+    {
+        // Temporary art: reuse the Stick item icon.
+        textureRow = 3;
+        feature = ItemFeature::PlaceBlock;
+        placedBlockType = BlockType::Sapling;
+    }
 
     // --------------------------------------------------------
-    // Crafting items
+    // Non-placeable items
     // --------------------------------------------------------
 
     else if (type == ItemType::Stick)
     {
-        textureRow =
-            3;
-
-        feature =
-            ItemFeature::None;
+        textureRow = 3;
     }
     else if (type == ItemType::Pebble)
     {
-        textureRow =
-            4;
-
-        feature =
-            ItemFeature::None;
+        textureRow = 4;
     }
 }

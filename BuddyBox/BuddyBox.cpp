@@ -34,6 +34,7 @@
 #include "lighting.h"
 #include "Skybox.h"
 #include "HandAnimator.h"
+#include "Structures.h"
 
 
 // ============================================================
@@ -120,6 +121,7 @@ int main()
     Camera camera;
     Inventory inventory;
     Lighting lighting;
+    Structures structures;
 
     std::vector<DroppedItem> droppedItems;
     std::vector<NPC> npcs;
@@ -603,32 +605,27 @@ int main()
 
 
         // ----------------------------------------------------
-        // Active blocks
-        // ----------------------------------------------------
+  // Structure blocks
+  // ----------------------------------------------------
 
-        for (const auto& position : world.activeBlocks)
+  // Saplings, spawners, and future special blocks update here.
+        structures.update(
+            deltaTime,
+            world,
+            lighting,
+            player,
+            npcs
+        );
+
+        // Structures report world cells they changed. Use the same
+        // lighting and queued mesh rebuilding as normal block edits.
+        for (StructureChange& change : structures.takeChanges())
         {
-            auto blockIt = world.blocks.find(position);
-
-            if (blockIt == world.blocks.end())
-            {
-                continue;
-            }
-
-            Block& block = blockIt->second;
-
-            int x = std::get<0>(position);
-            int y = std::get<1>(position);
-            int z = std::get<2>(position);
-
-            block.update(
-                deltaTime,
-                glm::vec3(
-                    static_cast<float>(x),
-                    static_cast<float>(y),
-                    static_cast<float>(z)
-                ),
-                npcs
+            rebuildChangedChunks(
+                change.x,
+                change.y,
+                change.z,
+                change.dirtyChunks
             );
         }
 

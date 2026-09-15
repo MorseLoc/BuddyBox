@@ -6,19 +6,11 @@
 class NPC;
 
 // ItemType is defined in Item.h.
-//
-// We forward-declare it here so Block
-// can remember which item it drops
-// without creating a circular include.
 enum class ItemType;
+
 
 // ============================================================
 // Block types
-//
-// Lists every type of block that can currently exist
-// in the BuddyBox world.
-//
-// Block.cpp decides the properties of each type.
 // ============================================================
 
 enum class BlockType
@@ -35,22 +27,13 @@ enum class BlockType
     YellowFlower,
     RedFlower,
     BlueFlower,
-    Bulb
+    Bulb,
+    Sapling
 };
 
 
 // ============================================================
 // Block
-//
-// Represents one block in the world.
-//
-// Each Block stores:
-// - What type of block it is
-// - Its physical size
-// - Whether it has collision
-// - Whether it can spawn Jebubs
-// - Its Jebub spawn timer
-// - Which texture it uses
 // ============================================================
 
 struct Block
@@ -59,65 +42,45 @@ struct Block
     // Basic block properties
     // --------------------------------------------------------
 
-    // What kind of block this is.
     BlockType type;
 
-
-    // Physical size of the block.
-    // Normal BuddyBox blocks are 1 x 1 x 1.
     glm::vec3 size;
 
-
-    // true  = player cannot move through this block.
-    // false = player can move through this block.
     bool solid;
 
-    // How long this block takes to break compared to
-// the player's break speed.
-//
-// Example:
-// 1.0f = normal
-// 2.0f = twice as long
-// 0.5f = half as long
     float durability;
 
-    // The item this block drops when broken.
-//
-// ItemType::None means the block
-// does not drop anything.
     ItemType dropItem;
 
-    // Light emitted by this block.
-//
-// 0 means this block does not create light.
-// 15 is maximum brightness.
     int emittedLight;
+
+    // True for blocks drawn as intersecting transparent planes
+    // instead of a normal cube.
+    bool crossedSprite;
 
 
     // --------------------------------------------------------
     // Spawner properties
     // --------------------------------------------------------
 
-    // true if this block is allowed to create Jebubs.
     bool spawnsJebub;
 
-
-    // Counts time since this block last spawned a Jebub.
-    //
-    // Only Spawner blocks actually use this timer.
     float jebubSpawnTimer;
+
+
+    // --------------------------------------------------------
+    // Sapling properties
+    // --------------------------------------------------------
+
+    bool growsTree;
+
+    float treeGrowthTimer;
 
 
     // --------------------------------------------------------
     // Texture
     // --------------------------------------------------------
 
-    // Which row of the block texture atlas this block uses.
-    //
-    // Example:
-    // 0 = Grass
-    // 1 = Spawner
-    // 2 = Dirt
     int textureRow;
 
 
@@ -125,10 +88,8 @@ struct Block
     // Block behavior
     // --------------------------------------------------------
 
-    // Updates special behavior for this block.
-    //
-    // Spawner blocks use this to create Jebubs.
-    void update(
+    // Returns true when a sapling has reached its growth time.
+    bool update(
         float deltaTime,
         const glm::vec3& position,
         std::vector<NPC>& npcs
@@ -139,11 +100,8 @@ struct Block
     // Constructor
     // --------------------------------------------------------
 
-    // Creates a block of the requested type.
-    //
-    // Block.cpp uses the type to assign the block's
-    // size, collision, texture, and other properties.
     Block(BlockType type);
 
+    // True when this block needs an update every frame.
     bool needsUpdate() const;
 };

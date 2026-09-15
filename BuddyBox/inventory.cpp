@@ -107,6 +107,11 @@ bool Inventory::loadFromFile(
             slots[slot].item = ItemType::Bulb;
             slots[slot].amount = 1;
         }
+        else if (itemName == "Sapling")
+        {
+            slots[slot].item = ItemType::Sapling;
+            slots[slot].amount = 1;
+        }
     }
 
     std::cout << "Inventory loaded.\n";

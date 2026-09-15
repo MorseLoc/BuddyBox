@@ -3,64 +3,41 @@
 #include "Item.h"
 
 
-
 // ============================================================
 // Block constructor
-//
-// Creates a block and gives it the correct properties
-// based on its BlockType.
-//
-// Most blocks currently share the same basic properties:
-// - 1 x 1 x 1 size
-// - solid
-// - does not spawn Jebubs
-//
-// After setting those defaults, we only change the
-// properties that are unique to each block type.
 // ============================================================
 
 Block::Block(BlockType blockType)
 {
-    // Store what kind of block this is.
     type = blockType;
-
 
     // --------------------------------------------------------
     // Default block properties
     // --------------------------------------------------------
 
-    // All current blocks are normal 1 x 1 x 1 cubes.
     size = glm::vec3(
         1.0f,
         1.0f,
         1.0f
     );
 
-
-    // All current blocks have collision.
-    // This means the player cannot walk through them.
     solid = true;
 
-    // Default block durability.
-// A durability of 1.0f will eventually mean
-// 1 second with the player's normal break speed.
     durability = 1.0f;
 
-
-    // Most blocks do not spawn Jebubs.
-    spawnsJebub = false;
-    // Start every block's spawn timer at zero.
-    //
-    // Normal blocks never use this.
-    // Spawner blocks count toward 60 seconds.
-    jebubSpawnTimer = 0.0f;
-
-    // Blocks drop nothing unless their
-// specific BlockType says otherwise.
-    dropItem =
-        ItemType::None;
+    dropItem = ItemType::None;
 
     emittedLight = 0;
+
+    crossedSprite = false;
+
+    spawnsJebub = false;
+    jebubSpawnTimer = 0.0f;
+
+    growsTree = false;
+    treeGrowthTimer = 0.0f;
+
+    textureRow = 0;
 
     // --------------------------------------------------------
     // Block-specific properties
@@ -68,199 +45,161 @@ Block::Block(BlockType blockType)
 
     if (type == BlockType::Grass)
     {
-        // Grass uses row 0 of the texture atlas.
         textureRow = 0;
-
         durability = 0.5f;
-
-        dropItem =
-            ItemType::GrassBlock;
+        dropItem = ItemType::GrassBlock;
     }
     else if (type == BlockType::Spawner)
     {
-        // Spawner uses row 1 of the texture atlas.
         textureRow = 1;
-
-        // Spawners are the only current blocks
-        // that are allowed to create Jebubs.
         spawnsJebub = true;
-
         durability = 999.0f;
     }
     else if (type == BlockType::Dirt)
     {
-        // Dirt uses row 2 of the texture atlas.
         textureRow = 2;
-
         durability = 0.5f;
-
-        dropItem =
-            ItemType::DirtBlock;
+        dropItem = ItemType::DirtBlock;
     }
     else if (type == BlockType::Wood)
     {
-        // Wood uses row 3 of the texture atlas.
         textureRow = 3;
-
         durability = 2.0f;
-
-        dropItem =
-            ItemType::WoodBlock;
+        dropItem = ItemType::WoodBlock;
     }
-
     else if (type == BlockType::Leaf)
     {
-        // Leaf uses row 4 of the texture atlas.
         textureRow = 4;
-
-        // Leaves drop a stick when broken.
-        dropItem =
-            ItemType::Stick;
+        dropItem = ItemType::Stick;
     }
     else if (type == BlockType::Stone)
     {
-        // Stone uses row 5 of the texture atlas.
         textureRow = 5;
-
         durability = 3.0f;
-
-        dropItem =
-            ItemType::Pebble;
+        dropItem = ItemType::Pebble;
     }
     else if (type == BlockType::Wood2)
     {
-        // Wood2 uses row 6 of the texture atlas.
         textureRow = 6;
-
         durability = 2.0f;
-
-        dropItem =
-            ItemType::Wood2Block;
+        dropItem = ItemType::Wood2Block;
     }
     else if (type == BlockType::Wood3)
     {
-        // Wood3 uses row 7 of the texture atlas.
         textureRow = 7;
-
         durability = 2.0f;
-
-        dropItem =
-            ItemType::Wood3Block;
+        dropItem = ItemType::Wood3Block;
     }
     else if (type == BlockType::Wood4)
     {
-        // Wood4 uses row 8 of the texture atlas.
         textureRow = 8;
-
         durability = 2.0f;
-
-        dropItem =
-            ItemType::Wood4Block;
+        dropItem = ItemType::Wood4Block;
     }
     else if (type == BlockType::YellowFlower)
     {
-        // YellowFlower uses row 9 of the texture atlas.
         textureRow = 9;
-
         durability = 0.5f;
-
-        // Yellow flowers drop a grass block when broken.
-        dropItem =
-            ItemType::GrassBlock;
+        dropItem = ItemType::GrassBlock;
     }
     else if (type == BlockType::RedFlower)
     {
-        // RedFlower uses row 10 of the texture atlas.
         textureRow = 10;
-
         durability = 0.5f;
-
-        // Red flowers drop a grass block when broken.
-        dropItem =
-            ItemType::GrassBlock;
+        dropItem = ItemType::GrassBlock;
     }
     else if (type == BlockType::BlueFlower)
     {
-        // BlueFlower uses row 11 of the texture atlas.
         textureRow = 11;
-
         durability = 0.5f;
-
-        // Blue flowers drop a grass block when broken.
-        dropItem =
-            ItemType::GrassBlock;
+        dropItem = ItemType::GrassBlock;
     }
     else if (type == BlockType::Bulb)
     {
-        // Temporary: uses an existing yellow-looking atlas row.
         textureRow = 12;
 
-        // A small floating bulb instead of a full cube.
         size = glm::vec3(0.35f);
-
-        // The player can walk through it.
         solid = false;
 
         durability = 0.2f;
-
         dropItem = ItemType::Bulb;
 
-        // Maximum light level.
         emittedLight = 15;
-        }
+    }
+    else if (type == BlockType::Sapling)
+    {
+        // Temporary art: reuse the Bulb block's atlas row.
+        textureRow = 12;
+
+        // The mesh turns this into two intersecting planes.
+        size = glm::vec3(0.8f, 1.0f, 0.8f);
+
+        solid = false;
+        crossedSprite = true;
+
+        durability = 0.2f;
+        dropItem = ItemType::Sapling;
+
+        growsTree = true;
+    }
 }
 
+
 // ============================================================
-// Update block
-//
-// Handles special behavior that belongs to a block.
-//
-// Currently:
-// - Spawner blocks create one Jebub every 60 seconds.
+// Update block behavior
 // ============================================================
 
-void Block::update(
+bool Block::update(
     float deltaTime,
     const glm::vec3& position,
     std::vector<NPC>& npcs
 )
 {
-    // Normal blocks have nothing to update.
-    if (!spawnsJebub)
+    // --------------------------------------------------------
+    // Spawner behavior
+    // --------------------------------------------------------
+
+    if (spawnsJebub)
     {
-        return;
+        jebubSpawnTimer += deltaTime;
+
+        if (jebubSpawnTimer >= 60.0f)
+        {
+            npcs.emplace_back(
+                NPCType::Jebub,
+                glm::vec3(
+                    position.x,
+                    position.y + 1.15f,
+                    position.z
+                )
+            );
+
+            jebubSpawnTimer = 0.0f;
+        }
     }
 
+    // --------------------------------------------------------
+    // Sapling behavior
+    // --------------------------------------------------------
 
-    // Count time for this individual Spawner.
-    jebubSpawnTimer +=
-        deltaTime;
-
-
-    // Wait until one minute has passed.
-    if (jebubSpawnTimer < 60.0f)
+    if (growsTree)
     {
-        return;
+        treeGrowthTimer += deltaTime;
+
+        // Once mature, keep reporting ready until the game
+        // finds enough empty space to grow the tree.
+        return treeGrowthTimer >= 10.0f;
     }
 
-
-    // Create a Jebub above this Spawner.
-    npcs.emplace_back(
-        NPCType::Jebub,
-        glm::vec3(
-            position.x,
-            position.y + 1.15f,
-            position.z
-        )
-    );
-
-
-    // Start this Spawner's timer again.
-    jebubSpawnTimer =
-        0.0f;
+    return false;
 }
+
+
+// ============================================================
+// Does this block need per-frame updates?
+// ============================================================
 
 bool Block::needsUpdate() const
 {
-    return spawnsJebub;
+    return spawnsJebub || growsTree;
 }

@@ -302,6 +302,10 @@ bool World::loadFromFile(
         {
             blockType = BlockType::Bulb;
         }
+        else if (blockTypeName == "Sapling")
+        {
+            blockType = BlockType::Sapling;
+        }
         else
         {
             // Skip unknown block types.

@@ -44,6 +44,8 @@ add_executable(BuddyBox
     "Skybox.cpp"
     "HandAnimator.h"
     "HandAnimator.cpp"
+    "Structures.h"
+    "Structures.cpp"
 )
 
 configure_file(
