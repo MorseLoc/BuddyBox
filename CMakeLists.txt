@@ -1,7 +1,7 @@
 ﻿# CMakeList.txt : Top-level CMake project file, do global configuration
 # and include sub-projects here.
 #
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required(VERSION 3.24)
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
@@ -13,15 +13,14 @@ project ("BuddyBox")
 
 include(FetchContent)
 
-FetchContent_Declare(
+FetchContent_Declare(S
     glad
     GIT_REPOSITORY https://github.com/Dav1dde/glad.git
     GIT_TAG glad2
+    SOURCE_SUBDIR cmake
 )
 
 FetchContent_MakeAvailable(glad)
-
-add_subdirectory("${glad_SOURCE_DIR}/cmake" glad_cmake)
 
 glad_add_library(
     glad_gl_core_33
