@@ -1,7 +1,7 @@
 #include "HandAnimator.h"
 #include "textureManager.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include <algorithm>
 #include <cmath>

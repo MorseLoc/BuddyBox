@@ -3,7 +3,7 @@
 #include "World.h"
 #include "lighting.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <algorithm>
 #include <algorithm>
 #include <tuple>

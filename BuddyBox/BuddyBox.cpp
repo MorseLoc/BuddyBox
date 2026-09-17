@@ -1,4 +1,4 @@
-﻿#include <glad/glad.h>
+﻿#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
@@ -99,11 +99,11 @@ int main()
     // 2. Load OpenGL
     // --------------------------------------------------------
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    int version = gladLoadGL(glfwGetProcAddress);
+
+    if (version == 0)
     {
-        std::cout << "GLAD failed to start.\n";
-        glfwDestroyWindow(window);
-        glfwTerminate();
+        std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 

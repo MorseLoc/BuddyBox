@@ -1,6 +1,6 @@
 #include "TextureManager.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <stb_image.h>
 
 #include <iostream>
