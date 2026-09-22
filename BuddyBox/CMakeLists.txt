@@ -45,6 +45,7 @@ add_executable(BuddyBox
     "HandAnimator.cpp"
     "Structures.h"
     "Structures.cpp"
+    "CraftingRecipe.h"
 )
 
 configure_file(

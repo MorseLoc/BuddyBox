@@ -65,8 +65,7 @@ Item::Item(
     }
     else if (type == ItemType::Sapling)
     {
-        // Temporary art: reuse the Stick item icon.
-        textureRow = 3;
+        textureRow = 9;
         feature = ItemFeature::PlaceBlock;
         placedBlockType = BlockType::Sapling;
     }

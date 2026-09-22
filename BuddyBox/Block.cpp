@@ -128,8 +128,7 @@ Block::Block(BlockType blockType)
     }
     else if (type == BlockType::Sapling)
     {
-        // Temporary art: reuse the Bulb block's atlas row.
-        textureRow = 12;
+        textureRow = 13;
 
         // The mesh turns this into two intersecting planes.
         size = glm::vec3(0.8f, 1.0f, 0.8f);
