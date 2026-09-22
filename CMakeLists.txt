@@ -13,7 +13,7 @@ project ("BuddyBox")
 
 include(FetchContent)
 
-FetchContent_Declare(S
+FetchContent_Declare(
     glad
     GIT_REPOSITORY https://github.com/Dav1dde/glad.git
     GIT_TAG glad2
